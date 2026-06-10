@@ -214,10 +214,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_llm_adapter_reachable() {
-        let Ok(api_key) = std::env::var("OPENAI_API_KEY") else {
-            println!("Skipping: OPENAI_API_KEY not set");
-            return;
-        };
+        dotenvy::dotenv().ok();
+        let api_key = std::env::var("OPENAI_API_KEY")
+            .expect("OPENAI_API_KEY must be set in environment or .env");
         let adapter = LlmAdapter {
             client: reqwest::Client::new(),
             api_key,
