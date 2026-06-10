@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, Query},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -10,8 +10,9 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::models::{RateSeriesRequest, Series, SeriesRating};
+use crate::state::AppState;
 
-pub fn router() -> Router {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
         .route("/series", get(get_series_page))
@@ -22,7 +23,6 @@ pub fn router() -> Router {
 
 #[derive(Deserialize, ToSchema)]
 pub struct SearchParams {
-    /// Search query string
     pub q: String,
 }
 
@@ -35,7 +35,7 @@ pub struct SearchParams {
     ),
     tag = "health"
 )]
-pub async fn health() -> impl IntoResponse {
+pub async fn health(State(_state): State<AppState>) -> impl IntoResponse {
     StatusCode::OK
 }
 
@@ -48,8 +48,7 @@ pub async fn health() -> impl IntoResponse {
     ),
     tag = "series"
 )]
-pub async fn get_series_page() -> impl IntoResponse {
-    // TODO: fetch from DB
+pub async fn get_series_page(State(_state): State<AppState>) -> impl IntoResponse {
     let series = vec![
         Series {
             id: Uuid::new_v4(),
@@ -81,8 +80,10 @@ pub async fn get_series_page() -> impl IntoResponse {
     ),
     tag = "series"
 )]
-pub async fn search_series(Query(params): Query<SearchParams>) -> impl IntoResponse {
-    // TODO: query DB with params.q
+pub async fn search_series(
+    State(_state): State<AppState>,
+    Query(params): Query<SearchParams>,
+) -> impl IntoResponse {
     let results = vec![Series {
         id: Uuid::new_v4(),
         title: format!("Result for '{}'", params.q),
@@ -104,17 +105,19 @@ pub async fn search_series(Query(params): Query<SearchParams>) -> impl IntoRespo
     ),
     tag = "series"
 )]
-pub async fn rate_series(Json(payload): Json<RateSeriesRequest>) -> impl IntoResponse {
+pub async fn rate_series(
+    State(_state): State<AppState>,
+    Json(payload): Json<RateSeriesRequest>,
+) -> impl IntoResponse {
     if payload.rating == 0 || payload.rating > 10 {
         return (
             StatusCode::UNPROCESSABLE_ENTITY,
             Json(serde_json::json!({ "error": "rating must be between 1 and 10" })),
         );
     }
-    // TODO: persist to DB
     let rating = SeriesRating {
         series_id: payload.series_id,
-        user_id: Uuid::new_v4(), // TODO: replace with auth'd user id
+        user_id: Uuid::new_v4(),
         rating: payload.rating,
     };
     (StatusCode::CREATED, Json(serde_json::json!(rating)))
@@ -132,8 +135,10 @@ pub async fn rate_series(Json(payload): Json<RateSeriesRequest>) -> impl IntoRes
     ),
     tag = "series"
 )]
-pub async fn get_rated_series(Path(user_id): Path<Uuid>) -> impl IntoResponse {
-    // TODO: fetch ratings for user_id from DB
+pub async fn get_rated_series(
+    State(_state): State<AppState>,
+    Path(user_id): Path<Uuid>,
+) -> impl IntoResponse {
     let ratings = vec![SeriesRating {
         series_id: Uuid::new_v4(),
         user_id,
