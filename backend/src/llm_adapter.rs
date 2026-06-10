@@ -7,8 +7,7 @@ use utoipa::ToSchema;
 
 use crate::models::{Series, SeriesRating};
 
-const MODEL: &str = "claude-opus-4-8";
-const MAX_TOKENS: u32 = 2048;
+const MODEL: &str = "o4-mini";
 const MAX_RETRIES: u8 = 3;
 
 const SYSTEM_PROMPT: &str = "\
@@ -54,39 +53,33 @@ pub struct Recommendation {
     pub confidence: f32,
 }
 
-// --- Internal Anthropic API shapes ---
+// --- Internal OpenAI API shapes ---
 
 #[derive(Serialize)]
-struct AnthropicMessage {
+struct OpenAiMessage {
     role: String,
     content: String,
 }
 
 #[derive(Serialize)]
-struct AnthropicRequest<'a> {
+struct OpenAiRequest<'a> {
     model: &'a str,
-    max_tokens: u32,
-    system: &'a str,
-    messages: &'a [AnthropicMessage],
-    thinking: ThinkingConfig,
-}
-
-#[derive(Serialize)]
-struct ThinkingConfig {
-    #[serde(rename = "type")]
-    kind: &'static str,
+    messages: Vec<OpenAiMessage>,
 }
 
 #[derive(Deserialize)]
-struct AnthropicResponse {
-    content: Vec<ContentBlock>,
+struct OpenAiResponse {
+    choices: Vec<Choice>,
 }
 
 #[derive(Deserialize)]
-struct ContentBlock {
-    #[serde(rename = "type")]
-    kind: String,
-    text: Option<String>,
+struct Choice {
+    message: MessageContent,
+}
+
+#[derive(Deserialize)]
+struct MessageContent {
+    content: String,
 }
 
 // --- Public service ---
@@ -100,8 +93,8 @@ impl LlmAdapter {
     pub fn new() -> Self {
         Self {
             client: Client::new(),
-            api_key: env::var("ANTHROPIC_API_KEY")
-                .expect("ANTHROPIC_API_KEY environment variable must be set"),
+            api_key: env::var("OPENAI_API_KEY")
+                .expect("OPENAI_API_KEY environment variable must be set"),
         }
     }
 
@@ -123,7 +116,7 @@ impl LlmAdapter {
         &self,
         initial_prompt: String,
     ) -> Result<SeriesRecommendations, LlmError> {
-        let mut messages = vec![AnthropicMessage {
+        let mut messages = vec![OpenAiMessage {
             role: "user".into(),
             content: initial_prompt,
         }];
@@ -143,11 +136,11 @@ impl LlmAdapter {
                         "LLM response failed to deserialize; retrying"
                     );
                     // Feed the bad response back so the model can self-correct.
-                    messages.push(AnthropicMessage {
+                    messages.push(OpenAiMessage {
                         role: "assistant".into(),
                         content: raw,
                     });
-                    messages.push(AnthropicMessage {
+                    messages.push(OpenAiMessage {
                         role: "user".into(),
                         content: format!(
                             "Your previous response failed to parse. Error: {err}. \
@@ -164,34 +157,39 @@ impl LlmAdapter {
         })
     }
 
-    async fn call_api(&self, messages: &[AnthropicMessage]) -> Result<String, LlmError> {
-        let body = AnthropicRequest {
+    async fn call_api(&self, messages: &[OpenAiMessage]) -> Result<String, LlmError> {
+        let mut all_messages = vec![OpenAiMessage {
+            role: "system".into(),
+            content: SYSTEM_PROMPT.into(),
+        }];
+        all_messages.extend(messages.iter().map(|m| OpenAiMessage {
+            role: m.role.clone(),
+            content: m.content.clone(),
+        }));
+
+        let body = OpenAiRequest {
             model: MODEL,
-            max_tokens: MAX_TOKENS,
-            system: SYSTEM_PROMPT,
-            messages,
-            thinking: ThinkingConfig { kind: "adaptive" },
+            messages: all_messages,
         };
 
         let response = self
             .client
-            .post("https://api.anthropic.com/v1/messages")
-            .header("x-api-key", &self.api_key)
-            .header("anthropic-version", "2023-06-01")
+            .post("https://api.openai.com/v1/chat/completions")
+            .bearer_auth(&self.api_key)
             .json(&body)
             .send()
             .await?
             .error_for_status()
             .map_err(|e| LlmError::Api(e.to_string()))?;
 
-        let parsed: AnthropicResponse = response.json().await?;
+        let parsed: OpenAiResponse = response.json().await?;
 
         parsed
-            .content
+            .choices
             .into_iter()
-            .find(|b| b.kind == "text")
-            .and_then(|b| b.text)
-            .ok_or_else(|| LlmError::Api("response contained no text block".into()))
+            .next()
+            .map(|c| c.message.content)
+            .ok_or_else(|| LlmError::Api("response contained no choices".into()))
     }
 }
 
@@ -204,4 +202,32 @@ fn build_prompt(reviews: &[SeriesRating], reviewed_recs: &[Series]) -> String {
          ## Previously recommended series the user has since rated\n{reviewed_recs_json}\n\n\
          Recommend 5 series the user would enjoy. Respond with ONLY the JSON object."
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_llm_adapter_reachable() {
+        let Ok(api_key) = std::env::var("OPENAI_API_KEY") else {
+            println!("Skipping: OPENAI_API_KEY not set");
+            return;
+        };
+        let adapter = LlmAdapter {
+            client: reqwest::Client::new(),
+            api_key,
+        };
+        let messages = vec![OpenAiMessage {
+            role: "user".into(),
+            content: "hey".into(),
+        }];
+        let result = adapter.call_api(&messages).await;
+        assert!(
+            result.is_ok(),
+            "LLM adapter call failed: {:?}",
+            result.err()
+        );
+        println!("Response: {}", result.unwrap());
+    }
 }
