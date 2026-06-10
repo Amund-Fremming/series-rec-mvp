@@ -182,7 +182,11 @@ impl LlmAdapter {
             .error_for_status()
             .map_err(|e| LlmError::Api(e.to_string()))?;
 
-        let parsed: OpenAiResponse = response.json().await?;
+        let raw_body = response.text().await?;
+        println!("OpenAI raw response: {raw_body}");
+
+        let parsed: OpenAiResponse = serde_json::from_str(&raw_body)
+            .map_err(|e| LlmError::Api(format!("failed to parse response: {e}")))?;
 
         parsed
             .choices
