@@ -8,6 +8,7 @@ pub struct Review {
     pub id: Uuid,
     pub series_id: Uuid,
     pub user_id: Uuid,
+    pub tmdb_series_id: Option<i64>,
     pub rating: i16,
     pub liked: Option<String>,
     pub disliked: Option<String>,

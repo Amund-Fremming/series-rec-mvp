@@ -16,11 +16,11 @@ const STEPS = [
   },
 ];
 
-export default function RatingModal({ series, onClose, onSubmit }) {
+export default function RatingModal({ series, onClose, onSubmit, initialData }) {
   const [step, setStep] = useState(1);
-  const [liked, setLiked] = useState('');
-  const [disliked, setDisliked] = useState('');
-  const [rating, setRating] = useState(0);
+  const [liked, setLiked] = useState(initialData?.liked ?? '');
+  const [disliked, setDisliked] = useState(initialData?.disliked ?? '');
+  const [rating, setRating] = useState(initialData?.rating ?? 0);
 
   const values = { liked, disliked };
   const setters = { liked: setLiked, disliked: setDisliked };

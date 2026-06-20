@@ -1,30 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import StarRating from '../components/StarRating';
 import RatingModal from '../components/RatingModal';
-import { saveReview } from '../client';
+import { saveReview, deleteReview, getUserReview } from '../client';
 import { useUserId } from '../hooks/useUserId';
 
 export default function SeriesDetailScreen({ series, onBack }) {
   const [userId] = useUserId();
   const [showModal, setShowModal] = useState(false);
-  const [userRating, setUserRating] = useState(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [existingReview, setExistingReview] = useState(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+
+  useEffect(() => {
+    if (!userId) return;
+    setReviewLoading(true);
+    getUserReview(userId, series.id)
+      .then((review) => { setExistingReview(review); setReviewLoading(false); })
+      .catch(() => setReviewLoading(false));
+  }, [userId, series.id]);
 
   async function handleSubmit(data) {
     setSubmitError(null);
     try {
-      await saveReview({
+      if (existingReview) {
+        await deleteReview(existingReview.id);
+      }
+      const saved = await saveReview({
         series_id: crypto.randomUUID(),
         user_id: userId,
         tmdb_series_id: series.id,
-        // scale 0–5 star rating to 1–10 backend range
         rating: Math.max(1, Math.round(data.rating * 2)),
         liked: data.liked || undefined,
         disliked: data.disliked || undefined,
       });
-      setUserRating(data.rating);
-      setSubmitted(true);
+      setExistingReview(saved);
       setShowModal(false);
     } catch {
       setSubmitError('Failed to save rating. Please try again.');
@@ -33,6 +42,8 @@ export default function SeriesDetailScreen({ series, onBack }) {
 
   const poster = series.poster
     ?? `https://placehold.co/200x300/1a1a1a/ffffff?text=${encodeURIComponent(series.title.slice(0, 2).toUpperCase())}`;
+
+  const displayRating = existingReview ? existingReview.rating / 2 : null;
 
   return (
     <div className="screen">
@@ -66,18 +77,23 @@ export default function SeriesDetailScreen({ series, onBack }) {
 
           {submitError && <p className="login-error">{submitError}</p>}
 
-          {submitted && userRating !== null ? (
+          {reviewLoading ? (
+            <p className="muted-label">Loading your review…</p>
+          ) : existingReview ? (
             <div className="detail-user-rating">
-              <div className="muted-label">Your rating</div>
+              <div className="muted-label">Your review</div>
               <div className="detail-user-rating-row">
-                <StarRating value={userRating} readOnly size={24} />
-                <span className="detail-user-rating-value">{userRating} / 5</span>
+                <StarRating value={displayRating} readOnly size={24} />
+                <span className="detail-user-rating-value">{displayRating} / 5</span>
               </div>
-              <button
-                className="btn btn-mt"
-                onClick={() => setShowModal(true)}
-              >
-                Update rating
+              {existingReview.liked && (
+                <p className="review-sentiment"><span className="review-label">Liked:</span> {existingReview.liked}</p>
+              )}
+              {existingReview.disliked && (
+                <p className="review-sentiment"><span className="review-label">Disliked:</span> {existingReview.disliked}</p>
+              )}
+              <button className="btn btn-mt" onClick={() => setShowModal(true)}>
+                Update review
               </button>
             </div>
           ) : (
@@ -95,6 +111,11 @@ export default function SeriesDetailScreen({ series, onBack }) {
       {showModal && (
         <RatingModal
           series={series}
+          initialData={existingReview ? {
+            rating: displayRating,
+            liked: existingReview.liked ?? '',
+            disliked: existingReview.disliked ?? '',
+          } : undefined}
           onClose={() => setShowModal(false)}
           onSubmit={handleSubmit}
         />

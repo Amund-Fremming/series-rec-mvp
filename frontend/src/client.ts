@@ -86,6 +86,10 @@ export async function createUser(payload: CreateUserRequest): Promise<string> {
   return res.json() as Promise<string>;
 }
 
+export async function getUserReview(userId: string, tmdbSeriesId: number): Promise<ReviewDto | null> {
+  return apiFetch<ReviewDto | null>(`/series/review?user_id=${userId}&tmdb_series_id=${tmdbSeriesId}`);
+}
+
 export async function getRecommendations(userId: string): Promise<RecommendationDto[]> {
   return apiFetch<RecommendationDto[]>(`/series/recommendations/${userId}`);
 }

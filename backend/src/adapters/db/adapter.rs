@@ -38,6 +38,7 @@ impl DbAdapter {
         &self,
         series_id: Uuid,
         user_id: Uuid,
+        tmdb_series_id: i64,
         rating: i16,
         liked: Option<String>,
         disliked: Option<String>,
@@ -46,12 +47,13 @@ impl DbAdapter {
         let review = sqlx::query_as!(
             Review,
             r#"
-            INSERT INTO reviews (series_id, user_id, rating, liked, disliked, was_recommended)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, series_id, user_id, rating, liked, disliked, was_recommended as "was_recommended!", created_at
+            INSERT INTO reviews (series_id, user_id, tmdb_series_id, rating, liked, disliked, was_recommended)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id, series_id, user_id, tmdb_series_id, rating, liked, disliked, was_recommended as "was_recommended!", created_at
             "#,
             series_id,
             user_id,
+            tmdb_series_id,
             rating,
             liked,
             disliked,
@@ -67,7 +69,7 @@ impl DbAdapter {
         let reviews = sqlx::query_as!(
             Review,
             r#"
-            SELECT id, series_id, user_id, rating, liked, disliked, was_recommended as "was_recommended!", created_at
+            SELECT id, series_id, user_id, tmdb_series_id, rating, liked, disliked, was_recommended as "was_recommended!", created_at
             FROM reviews
             WHERE series_id = $1
             ORDER BY created_at DESC
@@ -78,6 +80,29 @@ impl DbAdapter {
         .await?;
 
         Ok(reviews)
+    }
+
+    pub async fn get_user_review(
+        &self,
+        user_id: Uuid,
+        tmdb_series_id: i64,
+    ) -> Result<Option<Review>, DbError> {
+        let review = sqlx::query_as!(
+            Review,
+            r#"
+            SELECT id, series_id, user_id, tmdb_series_id, rating, liked, disliked, was_recommended as "was_recommended!", created_at
+            FROM reviews
+            WHERE user_id = $1 AND tmdb_series_id = $2
+            ORDER BY created_at DESC
+            LIMIT 1
+            "#,
+            user_id,
+            tmdb_series_id,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(review)
     }
 
     pub async fn save_recommendation(&self, tmdb_series_id: i64) -> Result<(), DbError> {

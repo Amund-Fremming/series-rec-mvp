@@ -23,7 +23,7 @@ pub fn router() -> Router<AppState> {
         .route("/login", post(login))
         .route("/series", get(get_series_page))
         .route("/series/search", get(search_series))
-        .route("/series/review", post(save_review))
+        .route("/series/review", get(get_user_review).post(save_review))
         .route("/series/review/{review_id}", delete(delete_review))
         .route(
             "/series/recommendations/{user_id}",
@@ -100,6 +100,7 @@ pub async fn save_review(
         .save_review(
             payload.series_id,
             payload.user_id,
+            payload.tmdb_series_id,
             payload.rating,
             payload.liked,
             payload.disliked,
@@ -108,6 +109,25 @@ pub async fn save_review(
         .await?;
 
     Ok((StatusCode::CREATED, Json(ReviewDto::from(review))))
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct UserReviewParams {
+    pub user_id: Uuid,
+    pub tmdb_series_id: i64,
+}
+
+#[utoipa::path(get, path = "/series/review", params(("user_id" = Uuid, Query, description = "User UUID"), ("tmdb_series_id" = i64, Query, description = "TMDB series ID")), responses((status = 200, description = "User review or null", body = Option<ReviewDto>)), tag = "series")]
+pub async fn get_user_review(
+    State(state): State<AppState>,
+    Query(params): Query<UserReviewParams>,
+) -> Result<impl IntoResponse, AppError> {
+    let review = state
+        .db
+        .get_user_review(params.user_id, params.tmdb_series_id)
+        .await?;
+
+    Ok((StatusCode::OK, Json(review.map(ReviewDto::from))))
 }
 
 #[utoipa::path(delete, path = "/series/review/{review_id}", params(("review_id" = Uuid, Path, description = "Review UUID")), responses((status = 204, description = "Review deleted")), tag = "series")]

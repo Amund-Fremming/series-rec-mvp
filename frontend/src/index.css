@@ -454,6 +454,18 @@ body {
   color: var(--text);
 }
 
+.review-sentiment {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+
+.review-label {
+  font-weight: 600;
+  color: var(--text);
+}
+
 /* ── Modal ─────────────────────────────────── */
 
 .modal-backdrop {
@@ -612,6 +624,23 @@ body {
 
 .error-state {
   color: var(--accent);
+}
+
+/* ── Pagination ────────────────────────────── */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 16px 32px;
+}
+
+.pagination-page {
+  font-size: 14px;
+  color: var(--text-muted);
+  min-width: 60px;
+  text-align: center;
 }
 
 .login-submit {

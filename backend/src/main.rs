@@ -15,6 +15,7 @@ use utoipa_swagger_ui::SwaggerUi;
         handlers::get_series_page,
         handlers::search_series,
         handlers::save_review,
+        handlers::get_user_review,
         handlers::delete_review,
         handlers::get_recommendations,
     ),

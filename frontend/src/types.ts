@@ -20,6 +20,7 @@ export interface ReviewDto {
   id: string;
   series_id: string;
   user_id: string;
+  tmdb_series_id?: number;
   rating: number;
   liked?: string;
   disliked?: string;
