@@ -45,6 +45,12 @@ export default function HamburgerMenu({ currentScreen, onNavigate, userId, onLog
           >
             My Ratings
           </button>
+          <button
+            className={currentScreen === 'recommendations' ? 'active' : ''}
+            onClick={() => navigate('recommendations')}
+          >
+            Recommendations
+          </button>
           {userId ? (
             <button onClick={() => { setOpen(false); onLogout(); }}>
               Log out

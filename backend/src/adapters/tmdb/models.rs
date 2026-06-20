@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use utoipa::ToSchema;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SearchResponse {
@@ -9,7 +10,7 @@ pub struct SearchResponse {
     pub total_results: u32,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct SeriesListItem {
     pub id: u64,
     pub name: String,

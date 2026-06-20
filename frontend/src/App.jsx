@@ -6,6 +6,7 @@ import RatedScreen from './screens/RatedScreen';
 import SeriesDetailScreen from './screens/SeriesDetailScreen';
 import LoginScreen from './screens/LoginScreen';
 import CreateUserScreen from './screens/CreateUserScreen';
+import RecommendationsScreen from './screens/RecommendationsScreen';
 
 export default function App() {
   const [screen, setScreen] = useState('home');
@@ -36,6 +37,7 @@ export default function App() {
 
   const headerTitle =
     screen === 'rated' ? 'My Ratings' :
+    screen === 'recommendations' ? 'Recommendations' :
     screen === 'login' ? 'Login' :
     screen === 'create-user' ? 'Create Account' : '';
 
@@ -52,7 +54,10 @@ export default function App() {
       </header>
 
       {screen === 'home' && <HomeScreen onSelectSeries={selectSeries} />}
-      {screen === 'rated' && <RatedScreen />}
+      {screen === 'rated' && <RatedScreen userId={userId} />}
+      {screen === 'recommendations' && (
+        <RecommendationsScreen userId={userId} onSelectSeries={selectSeries} />
+      )}
       {screen === 'login' && <LoginScreen onLogin={handleLogin} />}
       {screen === 'create-user' && <CreateUserScreen onLogin={handleLogin} />}
       {screen === 'detail' && selectedSeries && (

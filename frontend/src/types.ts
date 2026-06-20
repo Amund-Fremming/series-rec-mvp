@@ -72,6 +72,12 @@ export interface SeriesRecommendations {
   taste_summary: string;
 }
 
+export interface TmdbSeriesDetails {
+  id: number;
+  name: string;
+  poster_path: string | null;
+}
+
 // Frontend display shape (normalised from SeriesListItem)
 export interface DisplaySeries {
   id: number; // TMDB ID

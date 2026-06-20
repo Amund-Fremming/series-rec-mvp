@@ -32,6 +32,7 @@ async fn main() {
         .save_review(
             series_id,
             user_id,
+            tmdb_series_id,
             8,
             Some("Great pacing".into()),
             None,

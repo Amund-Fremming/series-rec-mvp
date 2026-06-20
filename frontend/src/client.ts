@@ -1,4 +1,4 @@
-import type { CreateUserRequest, DisplaySeries, RecommendationDto, ReviewDto, ReviewRequest, SeriesListItem } from './types';
+import type { CreateUserRequest, DisplaySeries, RecommendationDto, ReviewDto, ReviewRequest, SeriesListItem, TmdbSeriesDetails } from './types';
 
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w300';
 
@@ -90,6 +90,21 @@ export async function getUserReview(userId: string, tmdbSeriesId: number): Promi
   return apiFetch<ReviewDto | null>(`/series/review?user_id=${userId}&tmdb_series_id=${tmdbSeriesId}`);
 }
 
+export async function getUserReviews(userId: string): Promise<ReviewDto[]> {
+  return apiFetch<ReviewDto[]>(`/series/reviews/${userId}`);
+}
+
+export async function getSeriesById(tmdbId: number): Promise<TmdbSeriesDetails> {
+  return apiFetch<TmdbSeriesDetails>(`/series/${tmdbId}`);
+}
+
 export async function getRecommendations(userId: string): Promise<RecommendationDto[]> {
   return apiFetch<RecommendationDto[]>(`/series/recommendations/${userId}`);
+}
+
+export async function generateRecommendations(userId: string): Promise<DisplaySeries[]> {
+  const items = await apiFetch<SeriesListItem[]>(`/series/recommendations/${userId}`, {
+    method: 'POST',
+  });
+  return items.map(toDisplaySeries);
 }

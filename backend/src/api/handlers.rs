@@ -11,7 +11,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    adapters::db::dto::RecommendationDto,
+    adapters::{db::dto::RecommendationDto, tmdb::models::SeriesListItem},
     errors::AppError,
     models::{CreateUserRequest, LoginRequest, PagedQuery, ReviewDto, ReviewRequest, Series},
     state::AppState,
@@ -25,9 +25,11 @@ pub fn router() -> Router<AppState> {
         .route("/series/search", get(search_series))
         .route("/series/review", get(get_user_review).post(save_review))
         .route("/series/review/{review_id}", delete(delete_review))
+        .route("/series/reviews/{user_id}", get(get_user_reviews))
+        .route("/series/{tmdb_id}", get(get_series_by_tmdb_id))
         .route(
             "/series/recommendations/{user_id}",
-            get(get_recommendations),
+            get(get_recommendations).post(generate_recommendations),
         )
         .route("/users", post(create_user))
 }
@@ -140,6 +142,25 @@ pub async fn delete_review(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(get, path = "/series/reviews/{user_id}", params(("user_id" = Uuid, Path, description = "User UUID")), responses((status = 200, description = "All reviews for user", body = Vec<ReviewDto>)), tag = "series")]
+pub async fn get_user_reviews(
+    State(state): State<AppState>,
+    Path(user_id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let reviews = state.db.get_user_reviews(user_id).await?;
+    let dtos: Vec<ReviewDto> = reviews.into_iter().map(ReviewDto::from).collect();
+    Ok((StatusCode::OK, Json(dtos)))
+}
+
+#[utoipa::path(get, path = "/series/{tmdb_id}", params(("tmdb_id" = u64, Path, description = "TMDB series ID")), responses((status = 200, description = "Series details from TMDB")), tag = "series")]
+pub async fn get_series_by_tmdb_id(
+    State(state): State<AppState>,
+    Path(tmdb_id): Path<u64>,
+) -> Result<impl IntoResponse, AppError> {
+    let details = state.tmdb.get_series_details(tmdb_id).await?;
+    Ok((StatusCode::OK, Json(details)))
+}
+
 #[utoipa::path(get, path = "/series/recommendations/{user_id}", params(("user_id" = Uuid, Path, description = "User UUID")), responses((status = 200, description = "Recommendations", body = Vec<RecommendationDto>)), tag = "series")]
 pub async fn get_recommendations(
     State(state): State<AppState>,
@@ -149,6 +170,45 @@ pub async fn get_recommendations(
     let dtos: Vec<RecommendationDto> = recs.into_iter().map(RecommendationDto::from).collect();
 
     Ok(Json(dtos))
+}
+
+#[utoipa::path(post, path = "/series/recommendations/{user_id}", params(("user_id" = Uuid, Path, description = "User UUID")), responses((status = 200, description = "Generated recommendations as TMDB series", body = Vec<SeriesListItem>)), tag = "series")]
+pub async fn generate_recommendations(
+    State(state): State<AppState>,
+    Path(user_id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let reviews = state.db.get_user_reviews(user_id).await?;
+
+    if reviews.is_empty() {
+        return Ok((StatusCode::OK, Json(Vec::<SeriesListItem>::new())));
+    }
+
+    let mut reviews_with_titles = Vec::new();
+    for review in reviews {
+        if let Some(tmdb_id) = review.tmdb_series_id {
+            if let Ok(details) = state.tmdb.get_series_details(tmdb_id as u64).await {
+                reviews_with_titles.push((review, details.name));
+            }
+        }
+    }
+
+    if reviews_with_titles.is_empty() {
+        return Ok((StatusCode::OK, Json(Vec::<SeriesListItem>::new())));
+    }
+
+    let llm_recs = state.llm.recommend(&reviews_with_titles).await?;
+
+    let mut series_results = Vec::new();
+    for rec in llm_recs.recommendations {
+        if let Ok(results) = state.tmdb.search_series(&rec.title).await {
+            if let Some(series) = results.into_iter().next() {
+                let _ = state.db.save_recommendation(series.id as i64).await;
+                series_results.push(series);
+            }
+        }
+    }
+
+    Ok((StatusCode::OK, Json(series_results)))
 }
 
 #[utoipa::path(post, path = "/users", request_body = CreateUserRequest, responses((status = 201, description = "User created"), (status = 409, description = "Username already exists")), tag = "users")]

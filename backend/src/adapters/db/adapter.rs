@@ -82,6 +82,23 @@ impl DbAdapter {
         Ok(reviews)
     }
 
+    pub async fn get_user_reviews(&self, user_id: Uuid) -> Result<Vec<Review>, DbError> {
+        let reviews = sqlx::query_as!(
+            Review,
+            r#"
+            SELECT id, series_id, user_id, tmdb_series_id, rating, liked, disliked, was_recommended as "was_recommended!", created_at
+            FROM reviews
+            WHERE user_id = $1
+            ORDER BY created_at DESC
+            "#,
+            user_id,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(reviews)
+    }
+
     pub async fn get_user_review(
         &self,
         user_id: Uuid,

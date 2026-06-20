@@ -1,6 +1,3 @@
-reset-db:
-    sqlx migrate revert --target-version 0 && sqlx migrate run
-
 hard-reset-db:
     docker-compose down -v && docker-compose up -d && sleep 2 && sqlx migrate run
 
@@ -28,3 +25,5 @@ ex:
     echo "> Running db examples"
     just ex-db
 
+reset-db:
+    cargo sqlx database reset --force -y
