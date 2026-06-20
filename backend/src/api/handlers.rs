@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 use serde::Deserialize;
 use utoipa::ToSchema;
@@ -11,19 +11,24 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
+    adapters::db::dto::RecommendationDto,
     errors::AppError,
-    models::{LoginRequest, PagedQuery, RateSeriesRequest, Series, SeriesRating},
+    models::{LoginRequest, PagedQuery, ReviewDto, ReviewRequest, Series},
     state::AppState,
 };
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
+        .route("/login", post(login))
         .route("/series", get(get_series_page))
         .route("/series/search", get(search_series))
-        .route("/series/rate", post(rate_series))
-        .route("/series/rated/{user_id}", get(get_rated_series))
-        .route("/login", post(login))
+        .route("/series/review", post(save_review))
+        .route("/series/review/{review_id}", delete(delete_review))
+        .route(
+            "/series/recommendations/{user_id}",
+            get(get_recommendations),
+        )
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -31,47 +36,35 @@ pub struct SearchParams {
     pub q: String,
 }
 
-/// Check API health
-#[utoipa::path(
-    get,
-    path = "/health",
-    responses(
-        (status = 200, description = "API is healthy")
-    ),
-    tag = "health"
-)]
+#[utoipa::path(get, path = "/health", responses((status = 200, description = "API is healthy")), tag = "health")]
 pub async fn health(State(_state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     Ok(StatusCode::OK)
 }
 
-#[utoipa::path(
-    get,
-    path = "/series",
-    responses(
-        (status = 200, description = "List of series", body = Vec<Series>)
-    ),
-    tag = "series"
-)]
+#[utoipa::path(post, path = "/login", request_body = LoginRequest, responses((status = 200, description = "User ID")), tag = "auth")]
+pub async fn login(
+    State(state): State<AppState>,
+    Json(body): Json<LoginRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let user_id = state
+        .db
+        .login_or_create_user(&body.username, &body.passcode)
+        .await?;
+
+    Ok((StatusCode::OK, Json(user_id)))
+}
+
+#[utoipa::path(get, path = "/series", responses((status = 200, description = "List of series", body = Vec<Series>)), tag = "series")]
 pub async fn get_series_page(
     State(state): State<AppState>,
     Query(q): Query<PagedQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     let page = state.tmdb.get_popular_series(q.page()).await?;
+
     Ok((StatusCode::OK, Json(page)))
 }
 
-/// Search series by title
-#[utoipa::path(
-    get,
-    path = "/series/search",
-    params(
-        ("q" = String, Query, description = "Search query string")
-    ),
-    responses(
-        (status = 200, description = "Matching series", body = Vec<Series>)
-    ),
-    tag = "series"
-)]
+#[utoipa::path(get, path = "/series/search", params(("q" = String, Query, description = "Search query")), responses((status = 200, description = "Matching series", body = Vec<Series>)), tag = "series")]
 pub async fn search_series(
     State(_state): State<AppState>,
     Query(params): Query<SearchParams>,
@@ -83,67 +76,56 @@ pub async fn search_series(
         genre: "Unknown".to_string(),
         year: 2020,
     }];
-    Ok(Json(results))
+
+    Ok((StatusCode::OK, Json(results)))
 }
 
-/// Rate a series
-#[utoipa::path(
-    post,
-    path = "/series/rate",
-    request_body = RateSeriesRequest,
-    responses(
-        (status = 201, description = "Rating saved", body = SeriesRating),
-        (status = 422, description = "Invalid rating value")
-    ),
-    tag = "series"
-)]
-pub async fn rate_series(
-    State(_state): State<AppState>,
-    Json(payload): Json<RateSeriesRequest>,
+#[utoipa::path(post, path = "/series/review", request_body = ReviewRequest, responses((status = 201, description = "Review saved", body = ReviewDto)), tag = "series")]
+pub async fn save_review(
+    State(state): State<AppState>,
+    Json(payload): Json<ReviewRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     if let Err(errors) = payload.validate() {
         return Err(AppError::ValidationError(errors.to_string()));
     }
-    let rating = SeriesRating {
-        series_id: payload.series_id,
-        user_id: Uuid::new_v4(),
-        rating: payload.rating,
-    };
-    Ok((StatusCode::CREATED, Json(serde_json::json!(rating))))
-}
 
-/// Get all series rated by a user
-#[utoipa::path(
-    get,
-    path = "/series/rated/{user_id}",
-    params(
-        ("user_id" = Uuid, Path, description = "User UUID")
-    ),
-    responses(
-        (status = 200, description = "Rated series for user", body = Vec<SeriesRating>)
-    ),
-    tag = "series"
-)]
-pub async fn get_rated_series(
-    State(_state): State<AppState>,
-    Path(user_id): Path<Uuid>,
-) -> Result<impl IntoResponse, AppError> {
-    let ratings = vec![SeriesRating {
-        series_id: Uuid::new_v4(),
-        user_id,
-        rating: 8,
-    }];
-    Ok(Json(ratings))
-}
-
-pub async fn login(
-    State(state): State<AppState>,
-    Json(body): Json<LoginRequest>,
-) -> Result<impl IntoResponse, AppError> {
-    let user_id = state
+    let was_recommended = state
         .db
-        .login_or_create_user(&body.username, &body.passcode)
+        .is_series_recommended(payload.tmdb_series_id)
         .await?;
 
-    Ok((StatusCode::OK, Json(user_id)))
+    let review = state
+        .db
+        .save_review(
+            payload.series_id,
+            payload.user_id,
+            payload.rating,
+            payload.liked,
+            payload.disliked,
+            was_recommended,
+        )
+        .await?;
+
+    Ok((StatusCode::CREATED, Json(ReviewDto::from(review))))
+}
+
+#[utoipa::path(delete, path = "/series/review/{review_id}", params(("review_id" = Uuid, Path, description = "Review UUID")), responses((status = 204, description = "Review deleted")), tag = "series")]
+pub async fn delete_review(
+    State(state): State<AppState>,
+    Path(review_id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    state.db.delete_review(review_id).await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(get, path = "/series/recommendations/{user_id}", params(("user_id" = Uuid, Path, description = "User UUID")), responses((status = 200, description = "Recommendations", body = Vec<RecommendationDto>)), tag = "series")]
+pub async fn get_recommendations(
+    State(state): State<AppState>,
+    Path(_user_id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let recs = state.db.get_recommendations().await?;
+    let dtos: Vec<RecommendationDto> = recs.into_iter().map(RecommendationDto::from).collect();
+
+    Ok(Json(dtos))
 }

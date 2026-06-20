@@ -1,7 +1,7 @@
-use backend::adapters::db::RecommendationDto;
+use backend::adapters::db::dto::RecommendationDto;
 use backend::adapters::llm::models::SeriesRecommendations;
 use backend::api::handlers;
-use backend::models::{RateSeriesRequest, Series, SeriesRating};
+use backend::models::{ReviewDto, ReviewRequest, Series};
 use backend::state::AppState;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -10,12 +10,14 @@ use utoipa_swagger_ui::SwaggerUi;
 #[openapi(
     paths(
         handlers::health,
+        handlers::login,
         handlers::get_series_page,
         handlers::search_series,
-        handlers::rate_series,
-        handlers::get_rated_series,
+        handlers::save_review,
+        handlers::delete_review,
+        handlers::get_recommendations,
     ),
-    components(schemas(Series, RateSeriesRequest, SeriesRating, SeriesRecommendations, RecommendationDto)),
+    components(schemas(Series, ReviewRequest, ReviewDto, SeriesRecommendations, RecommendationDto)),
     tags(
         (name = "health", description = "Health check"),
         (name = "series", description = "Series endpoints"),

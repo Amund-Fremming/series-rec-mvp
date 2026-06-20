@@ -1,7 +1,10 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
+
+use crate::adapters::db::models::Review;
 
 const DEFAULT_PAGE: u8 = 0;
 
@@ -15,18 +18,41 @@ pub struct Series {
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, Validate)]
-pub struct RateSeriesRequest {
+pub struct ReviewRequest {
     pub series_id: Uuid,
+    pub user_id: Uuid,
+    pub tmdb_series_id: i64,
     #[validate(range(min = 1, max = 10))]
-    pub rating: u8,
+    pub rating: i16,
+    pub liked: Option<String>,
+    pub disliked: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct SeriesRating {
+pub struct ReviewDto {
+    pub id: Uuid,
     pub series_id: Uuid,
     pub user_id: Uuid,
-    // Stored from 0-10 since 5 starts with half-starts equals to 10
-    pub rating: u8,
+    pub rating: i16,
+    pub liked: Option<String>,
+    pub disliked: Option<String>,
+    pub was_recommended: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+impl From<Review> for ReviewDto {
+    fn from(r: Review) -> Self {
+        Self {
+            id: r.id,
+            series_id: r.series_id,
+            user_id: r.user_id,
+            rating: r.rating,
+            liked: r.liked,
+            disliked: r.disliked,
+            was_recommended: r.was_recommended,
+            created_at: r.created_at,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]

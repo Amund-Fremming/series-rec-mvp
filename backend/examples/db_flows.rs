@@ -19,8 +19,30 @@ async fn main() {
     let user_id = Uuid::new_v4();
 
     // --- Reviews ---
-    match db.save_review(series_id, user_id, 8).await {
-        Ok(_) => println!("✅ Saved review (series={series_id}, user={user_id}, rating=8)"),
+    // First save a recommendation so we can verify was_recommended flag
+    let tmdb_series_id: i64 = 12345;
+    let _ = db.save_recommendation(tmdb_series_id).await;
+
+    let was_recommended = db
+        .is_series_recommended(tmdb_series_id)
+        .await
+        .unwrap_or(false);
+
+    match db
+        .save_review(
+            series_id,
+            user_id,
+            8,
+            Some("Great pacing".into()),
+            None,
+            was_recommended,
+        )
+        .await
+    {
+        Ok(r) => println!(
+            "✅ Saved review (id={}, was_recommended={})",
+            r.id, r.was_recommended
+        ),
         Err(e) => println!("❌ Failed to save review: {e}"),
     }
 
@@ -43,11 +65,6 @@ async fn main() {
     }
 
     // --- Recommendations ---
-    match db.save_recommendation(12345).await {
-        Ok(_) => println!("\n✅ Saved recommendation (tmdb_series_id=12345)"),
-        Err(e) => println!("\n❌ Failed to save recommendation: {e}"),
-    }
-
     match db.get_recommendations().await {
         Ok(recs) => {
             println!("✅ Fetched {} recommendation(s)", recs.len());
