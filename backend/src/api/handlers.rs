@@ -172,7 +172,7 @@ pub async fn get_recommendations(
     Ok(Json(dtos))
 }
 
-#[utoipa::path(post, path = "/series/recommendations/{user_id}", params(("user_id" = Uuid, Path, description = "User UUID")), responses((status = 200, description = "Generated recommendations as TMDB series", body = Vec<SeriesListItem>)), tag = "series")]
+#[utoipa::path(post, path = "/series/recommendations/{user_id}", params(("user_id" = Uuid, Path, description = "User UUID")), responses((status = 200, description = "Generated recommendations as TMDB series")), tag = "series")]
 pub async fn generate_recommendations(
     State(state): State<AppState>,
     Path(user_id): Path<Uuid>,

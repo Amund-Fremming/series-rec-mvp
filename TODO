@@ -1,6 +1,5 @@
 TODO
 
-- [ ] add billing info in openai api portal
-- [ ] get the smoke test for llm to work
-- [ ] implement database migrations and connect to frontend
-- [ ] start generating recommendations on button click and store them, so if you end up reviewing a recommendated you can use this to better prompt later
+- [ ] dont delete and recreate, add a new update review fn
+- [ ] on my revies screen dont show what i like and sislike, make you need to go into a new screen to see this
+- [ ] search dont work
