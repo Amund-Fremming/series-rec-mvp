@@ -8,6 +8,9 @@ use super::models::{Recommendation, Review, User};
 pub enum DbError {
     #[error("Database error: {0}")]
     Sqlx(#[from] sqlx::Error),
+
+    #[error("Username already exists: {0}")]
+    UsernameConflict(String),
 }
 
 #[derive(Clone)]
@@ -132,6 +135,27 @@ impl DbAdapter {
         .await?;
 
         Ok(())
+    }
+
+    pub async fn create_user(&self, username: &str, passcode: &str) -> Result<Uuid, DbError> {
+        let existing =
+            sqlx::query_scalar!(r#"SELECT id FROM users WHERE username = $1"#, username,)
+                .fetch_optional(&self.pool)
+                .await?;
+
+        if existing.is_some() {
+            return Err(DbError::UsernameConflict(username.to_string()));
+        }
+
+        let id = sqlx::query_scalar!(
+            r#"INSERT INTO users (username, passcode) VALUES ($1, $2) RETURNING id"#,
+            username,
+            passcode,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(id)
     }
 
     pub async fn login_or_create_user(

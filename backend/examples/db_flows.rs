@@ -84,10 +84,15 @@ async fn main() {
     }
 
     // --- Users ---
-    match db.login_or_create_user("alice", "secret123").await {
-        Ok(Some(id)) => println!("\n✅ login_or_create_user → user id: {id}"),
-        Ok(None) => println!("\n❌ login_or_create_user → wrong passcode"),
-        Err(e) => println!("\n❌ login_or_create_user failed: {e}"),
+    match db.create_user("bob", "pass123").await {
+        Ok(id) => println!("\n✅ create_user → user id: {id}"),
+        Err(e) => println!("\n❌ create_user failed: {e}"),
+    }
+
+    // Duplicate username should fail
+    match db.create_user("bob", "pass123").await {
+        Err(e) => println!("✅ Correctly rejected duplicate username: {e}"),
+        Ok(_) => println!("❌ Duplicate username was accepted"),
     }
 
     // Login with correct passcode

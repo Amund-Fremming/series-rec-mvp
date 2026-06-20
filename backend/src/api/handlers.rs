@@ -13,7 +13,7 @@ use validator::Validate;
 use crate::{
     adapters::db::dto::RecommendationDto,
     errors::AppError,
-    models::{LoginRequest, PagedQuery, ReviewDto, ReviewRequest, Series},
+    models::{CreateUserRequest, LoginRequest, PagedQuery, ReviewDto, ReviewRequest, Series},
     state::AppState,
 };
 
@@ -29,6 +29,7 @@ pub fn router() -> Router<AppState> {
             "/series/recommendations/{user_id}",
             get(get_recommendations),
         )
+        .route("/users", post(create_user))
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -128,4 +129,13 @@ pub async fn get_recommendations(
     let dtos: Vec<RecommendationDto> = recs.into_iter().map(RecommendationDto::from).collect();
 
     Ok(Json(dtos))
+}
+
+#[utoipa::path(post, path = "/users", request_body = CreateUserRequest, responses((status = 201, description = "User created"), (status = 409, description = "Username already exists")), tag = "users")]
+pub async fn create_user(
+    State(state): State<AppState>,
+    Json(body): Json<CreateUserRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let id = state.db.create_user(&body.username, &body.passcode).await?;
+    Ok((StatusCode::CREATED, Json(id)))
 }

@@ -13,7 +13,7 @@ pub enum AppError {
     Tmdb(#[from] TmdbError),
 
     #[error("Database error: {0}")]
-    Db(#[from] DbError),
+    Db(DbError),
 
     #[error("LLM error: {0}")]
     Llm(#[from] LlmError),
@@ -26,6 +26,9 @@ pub enum AppError {
 
     #[error("Validation error: {0}")]
     ValidationError(String),
+
+    #[error("Conflict: {0}")]
+    Conflict(String),
 }
 
 impl IntoResponse for AppError {
@@ -37,8 +40,20 @@ impl IntoResponse for AppError {
             AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
             AppError::BadRequest(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             AppError::ValidationError(_) => (StatusCode::UNPROCESSABLE_ENTITY, self.to_string()),
+            AppError::Conflict(_) => (StatusCode::CONFLICT, self.to_string()),
         };
 
         (status, Json(serde_json::json!({ "error": message }))).into_response()
+    }
+}
+
+impl From<DbError> for AppError {
+    fn from(e: DbError) -> Self {
+        match e {
+            DbError::UsernameConflict(u) => {
+                AppError::Conflict(format!("username '{u}' already exists"))
+            }
+            _ => AppError::Db(e),
+        }
     }
 }

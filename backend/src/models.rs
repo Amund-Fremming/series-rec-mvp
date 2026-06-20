@@ -56,6 +56,12 @@ impl From<Review> for ReviewDto {
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct CreateUserRequest {
+    pub username: String,
+    pub passcode: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct LoginRequest {
     pub username: String,
     pub passcode: String,
