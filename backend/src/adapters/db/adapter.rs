@@ -2,7 +2,7 @@ use sqlx::{Pool, Postgres};
 use thiserror::Error;
 use uuid::Uuid;
 
-use super::models::{Recommendation, Review};
+use super::models::{Recommendation, Review, User};
 
 #[derive(Debug, Error)]
 pub enum DbError {
@@ -10,6 +10,7 @@ pub enum DbError {
     Sqlx(#[from] sqlx::Error),
 }
 
+#[derive(Clone)]
 pub struct DbAdapter {
     pool: Pool<Postgres>,
 }
@@ -19,25 +20,44 @@ impl DbAdapter {
         Self { pool }
     }
 
+    pub async fn is_series_recommended(&self, tmdb_series_id: i64) -> Result<bool, DbError> {
+        let exists = sqlx::query_scalar!(
+            r#"SELECT EXISTS(SELECT 1 FROM recommendations WHERE tmdb_series_id = $1) as "exists!""#,
+            tmdb_series_id,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(exists)
+    }
+
     pub async fn save_review(
         &self,
         series_id: Uuid,
         user_id: Uuid,
         rating: i16,
-    ) -> Result<(), DbError> {
-        sqlx::query!(
+        liked: Option<String>,
+        disliked: Option<String>,
+        was_recommended: bool,
+    ) -> Result<Review, DbError> {
+        let review = sqlx::query_as!(
+            Review,
             r#"
-            INSERT INTO reviews (series_id, user_id, rating)
-            VALUES ($1, $2, $3)
+            INSERT INTO reviews (series_id, user_id, rating, liked, disliked, was_recommended)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, series_id, user_id, rating, liked, disliked, was_recommended as "was_recommended!", created_at
             "#,
             series_id,
             user_id,
             rating,
+            liked,
+            disliked,
+            was_recommended,
         )
-        .execute(&self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
-        Ok(())
+        Ok(review)
     }
 
     pub async fn get_reviews(&self, series_id: Uuid) -> Result<Vec<Review>, DbError> {
@@ -112,5 +132,36 @@ impl DbAdapter {
         .await?;
 
         Ok(())
+    }
+
+    pub async fn login_or_create_user(
+        &self,
+        username: &str,
+        passcode: &str,
+    ) -> Result<Option<Uuid>, DbError> {
+        let existing = sqlx::query_as!(
+            User,
+            r#"SELECT id, username, passcode, created_at FROM users WHERE username = $1"#,
+            username,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(user) = existing {
+            if user.passcode != passcode {
+                return Ok(None);
+            }
+            return Ok(Some(user.id));
+        }
+
+        let id = sqlx::query_scalar!(
+            r#"INSERT INTO users (username, passcode) VALUES ($1, $2) RETURNING id"#,
+            username,
+            passcode,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(Some(id))
     }
 }

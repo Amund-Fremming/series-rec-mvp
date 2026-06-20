@@ -78,6 +78,17 @@ async fn main() {
     println!("  Networks: {}", networks.join(", "));
     println!("  Overview: {}", details.overview);
 
+    // --- Popular series ---
+    match tmdb.get_popular_series(1).await {
+        Ok(popular) => {
+            println!("\n✅ Popular series (page 1): {} result(s)", popular.len());
+            for (i, s) in popular.iter().take(3).enumerate() {
+                println!("  {}. {} — rating: {:.1}/10", i + 1, s.name, s.vote_average);
+            }
+        }
+        Err(e) => println!("\n❌ Failed to fetch popular series: {e}"),
+    }
+
     // --- Watch providers for Norway ---
     match tmdb.get_watch_providers(top.id, "NO").await {
         Ok(Some(providers)) => match &providers.streaming {

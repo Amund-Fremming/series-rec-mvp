@@ -27,7 +27,10 @@ impl TmdbAdapter {
             .timeout(Duration::from_secs(10))
             .build()
             .expect("failed to build HTTP client");
-        Self { client, access_token }
+        Self {
+            client,
+            access_token,
+        }
     }
 
     pub async fn search_series(&self, query: &str) -> Result<Vec<SeriesListItem>, TmdbError> {
@@ -58,6 +61,22 @@ impl TmdbAdapter {
 
         let data: SeriesDetails = response.json().await?;
         Ok(data)
+    }
+
+    pub async fn get_popular_series(&self, page: u8) -> Result<Vec<SeriesListItem>, TmdbError> {
+        let page_str = page.to_string();
+        let response = self
+            .client
+            .get(format!("{BASE_URL}/tv/popular"))
+            .bearer_auth(&self.access_token)
+            .query(&[("language", "en-US"), ("page", &page_str)])
+            .send()
+            .await?
+            .error_for_status()
+            .map_err(|e| TmdbError::Api(e.to_string()))?;
+
+        let data: super::models::SearchResponse = response.json().await?;
+        Ok(data.results)
     }
 
     /// Returns streaming/rent/buy availability for a given country code (e.g. "NO" for Norway).

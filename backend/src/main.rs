@@ -1,4 +1,5 @@
-use backend::adapters::llm::adapter::{Recommendation, SeriesRecommendations};
+use backend::adapters::db::RecommendationDto;
+use backend::adapters::llm::models::SeriesRecommendations;
 use backend::api::handlers;
 use backend::models::{RateSeriesRequest, Series, SeriesRating};
 use backend::state::AppState;
@@ -14,7 +15,7 @@ use utoipa_swagger_ui::SwaggerUi;
         handlers::rate_series,
         handlers::get_rated_series,
     ),
-    components(schemas(Series, RateSeriesRequest, SeriesRating, SeriesRecommendations, Recommendation)),
+    components(schemas(Series, RateSeriesRequest, SeriesRating, SeriesRecommendations, RecommendationDto)),
     tags(
         (name = "health", description = "Health check"),
         (name = "series", description = "Series endpoints"),

@@ -1,29 +1,31 @@
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use utoipa::ToSchema;
 
-use crate::models::{Series, SeriesRating};
+use crate::adapters::{
+    db::models::Review,
+    llm::models::{OpenAiMessage, OpenAiRequest, OpenAiResponse, SeriesRecommendations},
+};
 
 const MODEL: &str = "o4-mini";
 const MAX_RETRIES: u8 = 3;
 
 const SYSTEM_PROMPT: &str = "\
-You are a TV series recommendation engine. Given a user's past ratings and any \
-previously recommended series they have since rated, suggest new series they would enjoy.
-
+You are a TV series recommendation engine. Given a user's past ratings, suggest new series they would enjoy.\n\
+If a user has previously rated a series that was recommended, treat that as a successful recommendation \
+regardless of the score — your goal is to maximise recommendation quality, not predicted rating.\n\
+\n\
 You MUST respond with ONLY a valid JSON object — no markdown fences, no explanation, \
-no text outside the JSON. The object must match this schema exactly:
-
-{
-  \"recommendations\": [
-    {
-      \"title\": \"string\",
-      \"genre\": \"string\",
-      \"confidence\": <integer between 0 and 100>
-    }
-  ],
-  \"taste_summary\": \"string — one sentence describing the user's taste profile\"
+no text outside the JSON. The object must match this schema exactly:\n\
+\n\
+{\n\
+  \"recommendations\": [\n\
+    {\n\
+      \"title\": \"string\",\n\
+      \"genre\": \"string\",\n\
+      \"confidence\": <integer between 0 and 100>\n\
+    }\n\
+  ],\n\
+  \"taste_summary\": \"string — one sentence describing the user's taste profile\"\n\
 }";
 
 #[derive(Debug, Error)]
@@ -35,50 +37,6 @@ pub enum LlmError {
     #[error("Failed to parse LLM response after {attempts} attempt(s): {last_error}")]
     ParseFailed { attempts: u8, last_error: String },
 }
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct SeriesRecommendations {
-    pub recommendations: Vec<Recommendation>,
-    pub taste_summary: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct Recommendation {
-    pub title: String,
-    pub genre: String,
-    pub confidence: u8,
-}
-
-// --- Internal OpenAI API shapes ---
-
-#[derive(Serialize)]
-struct OpenAiMessage {
-    role: String,
-    content: String,
-}
-
-#[derive(Serialize)]
-struct OpenAiRequest<'a> {
-    model: &'a str,
-    messages: Vec<OpenAiMessage>,
-}
-
-#[derive(Deserialize)]
-struct OpenAiResponse {
-    choices: Vec<Choice>,
-}
-
-#[derive(Deserialize)]
-struct Choice {
-    message: MessageContent,
-}
-
-#[derive(Deserialize)]
-struct MessageContent {
-    content: String,
-}
-
-// --- Public service ---
 
 #[derive(Clone)]
 pub struct LlmAdapter {
@@ -94,14 +52,13 @@ impl LlmAdapter {
         }
     }
 
-    /// Recommend series for a user given their ratings and any previously
-    /// recommended series they have since rated.
+    /// Recommend series based on a user's reviews.  Each entry pairs a `Review`
+    /// with the human-readable title of the series it refers to.
     pub async fn recommend(
         &self,
-        reviews: &[SeriesRating],
-        reviewed_recs: &[Series],
+        reviews: &[(Review, String)],
     ) -> Result<SeriesRecommendations, LlmError> {
-        let prompt = build_prompt(reviews, reviewed_recs);
+        let prompt = build_prompt(reviews);
         self.resilient_complete(prompt).await
     }
 
@@ -192,13 +149,23 @@ impl LlmAdapter {
     }
 }
 
-fn build_prompt(reviews: &[SeriesRating], reviewed_recs: &[Series]) -> String {
-    let reviews_json = serde_json::to_string_pretty(reviews).unwrap_or_default();
-    let reviewed_recs_json = serde_json::to_string_pretty(reviewed_recs).unwrap_or_default();
+fn build_prompt(reviews: &[(Review, String)]) -> String {
+    let entries: Vec<serde_json::Value> = reviews
+        .iter()
+        .map(|(r, title)| {
+            serde_json::json!({
+                "title": title,
+                "rating": r.rating,
+                "liked": r.liked,
+                "disliked": r.disliked,
+            })
+        })
+        .collect();
+
+    let reviews_json = serde_json::to_string_pretty(&entries).unwrap_or_default();
 
     format!(
-        "## User ratings\n{reviews_json}\n\n\
-         ## Previously recommended series the user has since rated\n{reviewed_recs_json}\n\n\
+        "## User reviews\n{reviews_json}\n\n\
          Recommend 5 series the user would enjoy. Respond with ONLY the JSON object."
     )
 }

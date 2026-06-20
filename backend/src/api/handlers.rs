@@ -11,7 +11,8 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    models::{RateSeriesRequest, Series, SeriesRating},
+    errors::AppError,
+    models::{LoginRequest, PagedQuery, RateSeriesRequest, Series, SeriesRating},
     state::AppState,
 };
 
@@ -22,6 +23,7 @@ pub fn router() -> Router<AppState> {
         .route("/series/search", get(search_series))
         .route("/series/rate", post(rate_series))
         .route("/series/rated/{user_id}", get(get_rated_series))
+        .route("/login", post(login))
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -38,11 +40,10 @@ pub struct SearchParams {
     ),
     tag = "health"
 )]
-pub async fn health(State(_state): State<AppState>) -> impl IntoResponse {
-    StatusCode::OK
+pub async fn health(State(_state): State<AppState>) -> Result<impl IntoResponse, AppError> {
+    Ok(StatusCode::OK)
 }
 
-/// Get a page of series
 #[utoipa::path(
     get,
     path = "/series",
@@ -51,24 +52,12 @@ pub async fn health(State(_state): State<AppState>) -> impl IntoResponse {
     ),
     tag = "series"
 )]
-pub async fn get_series_page(State(_state): State<AppState>) -> impl IntoResponse {
-    let series = vec![
-        Series {
-            id: Uuid::new_v4(),
-            title: "Breaking Bad".to_string(),
-            description: "A chemistry teacher turns drug lord.".to_string(),
-            genre: "Drama".to_string(),
-            year: 2008,
-        },
-        Series {
-            id: Uuid::new_v4(),
-            title: "The Wire".to_string(),
-            description: "Crime drama set in Baltimore.".to_string(),
-            genre: "Crime".to_string(),
-            year: 2002,
-        },
-    ];
-    Json(series)
+pub async fn get_series_page(
+    State(state): State<AppState>,
+    Query(q): Query<PagedQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    let page = state.tmdb.get_popular_series(q.page()).await?;
+    Ok((StatusCode::OK, Json(page)))
 }
 
 /// Search series by title
@@ -86,7 +75,7 @@ pub async fn get_series_page(State(_state): State<AppState>) -> impl IntoRespons
 pub async fn search_series(
     State(_state): State<AppState>,
     Query(params): Query<SearchParams>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, AppError> {
     let results = vec![Series {
         id: Uuid::new_v4(),
         title: format!("Result for '{}'", params.q),
@@ -94,7 +83,7 @@ pub async fn search_series(
         genre: "Unknown".to_string(),
         year: 2020,
     }];
-    Json(results)
+    Ok(Json(results))
 }
 
 /// Rate a series
@@ -111,19 +100,16 @@ pub async fn search_series(
 pub async fn rate_series(
     State(_state): State<AppState>,
     Json(payload): Json<RateSeriesRequest>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, AppError> {
     if let Err(errors) = payload.validate() {
-        return (
-            StatusCode::UNPROCESSABLE_ENTITY,
-            Json(serde_json::json!({ "error": errors })),
-        );
+        return Err(AppError::ValidationError(errors.to_string()));
     }
     let rating = SeriesRating {
         series_id: payload.series_id,
         user_id: Uuid::new_v4(),
         rating: payload.rating,
     };
-    (StatusCode::CREATED, Json(serde_json::json!(rating)))
+    Ok((StatusCode::CREATED, Json(serde_json::json!(rating))))
 }
 
 /// Get all series rated by a user
@@ -141,11 +127,23 @@ pub async fn rate_series(
 pub async fn get_rated_series(
     State(_state): State<AppState>,
     Path(user_id): Path<Uuid>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, AppError> {
     let ratings = vec![SeriesRating {
         series_id: Uuid::new_v4(),
         user_id,
         rating: 8,
     }];
-    Json(ratings)
+    Ok(Json(ratings))
+}
+
+pub async fn login(
+    State(state): State<AppState>,
+    Json(body): Json<LoginRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let user_id = state
+        .db
+        .login_or_create_user(&body.username, &body.passcode)
+        .await?;
+
+    Ok((StatusCode::OK, Json(user_id)))
 }

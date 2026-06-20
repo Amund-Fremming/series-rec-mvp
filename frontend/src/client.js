@@ -122,6 +122,17 @@ const MOCK_RATINGS = [
   },
 ];
 
+export async function login(username, passcode) {
+  const res = await fetch('/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, passcode }),
+  });
+  if (!res.ok) throw new Error('Invalid username or passcode');
+  const { user_id } = await res.json();
+  return user_id;
+}
+
 export async function getFirstPage() {
   // TODO: GET /api/series?page=1
   return MOCK_SERIES;

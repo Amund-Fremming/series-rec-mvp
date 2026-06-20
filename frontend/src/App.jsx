@@ -3,6 +3,7 @@ import HamburgerMenu from './components/HamburgerMenu';
 import HomeScreen from './screens/HomeScreen';
 import RatedScreen from './screens/RatedScreen';
 import SeriesDetailScreen from './screens/SeriesDetailScreen';
+import LoginScreen from './screens/LoginScreen';
 
 export default function App() {
   const [screen, setScreen] = useState('home');
@@ -20,7 +21,7 @@ export default function App() {
     setScreen('detail');
   }
 
-  const headerTitle = screen === 'rated' ? 'My Ratings' : '';
+  const headerTitle = screen === 'rated' ? 'My Ratings' : screen === 'login' ? 'Login' : '';
 
   return (
     <>
@@ -31,6 +32,7 @@ export default function App() {
 
       {screen === 'home' && <HomeScreen onSelectSeries={selectSeries} />}
       {screen === 'rated' && <RatedScreen onSelectSeries={selectSeries} />}
+      {screen === 'login' && <LoginScreen onSuccess={() => navigateTo('home')} />}
       {screen === 'detail' && selectedSeries && (
         <SeriesDetailScreen
           series={selectedSeries}

@@ -5,7 +5,7 @@ import { rateSeries } from '../client';
 import { useUserId } from '../hooks/useUserId';
 
 export default function SeriesDetailScreen({ series, onBack }) {
-  const userId = useUserId();
+  const [userId] = useUserId();
   const [showModal, setShowModal] = useState(false);
   const [userRating, setUserRating] = useState(series.userRating ?? null);
   const [submitted, setSubmitted] = useState(userRating !== null);

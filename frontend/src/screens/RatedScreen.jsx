@@ -4,7 +4,7 @@ import { getMyRatings } from '../client';
 import { useUserId } from '../hooks/useUserId';
 
 export default function RatedScreen({ onSelectSeries }) {
-  const userId = useUserId();
+  const [userId] = useUserId();
   const [rated, setRated] = useState([]);
   const [loading, setLoading] = useState(true);
 

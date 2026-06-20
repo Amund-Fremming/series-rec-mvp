@@ -1,4 +1,7 @@
 reset-db:
+    sqlx migrate revert --target-version 0 && sqlx migrate run
+
+hard-reset-db:
     docker-compose down -v && docker-compose up -d && sleep 2 && sqlx migrate run
 
 test:

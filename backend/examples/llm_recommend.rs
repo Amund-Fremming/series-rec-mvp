@@ -1,5 +1,7 @@
+use backend::adapters::db::models::Review;
 use backend::adapters::llm::adapter::LlmAdapter;
-use backend::models::{Series, SeriesRating};
+use chrono::Utc;
+use uuid::Uuid;
 
 #[tokio::main]
 async fn main() {
@@ -8,31 +10,41 @@ async fn main() {
 
     let adapter = LlmAdapter::new(api_key);
 
-    let series_id = uuid::Uuid::new_v4();
-    let user_id = uuid::Uuid::new_v4();
+    let reviews = vec![
+        (
+            Review {
+                id: Uuid::new_v4(),
+                series_id: Uuid::new_v4(),
+                user_id: Uuid::new_v4(),
+                rating: 9,
+                liked: Some("Great writing, complex characters".into()),
+                disliked: None,
+                was_recommended: false,
+                created_at: Utc::now(),
+            },
+            "Breaking Bad".to_string(),
+        ),
+        (
+            Review {
+                id: Uuid::new_v4(),
+                series_id: Uuid::new_v4(),
+                user_id: Uuid::new_v4(),
+                rating: 7,
+                liked: Some("Interesting premise".into()),
+                disliked: Some("Too slow in the middle".into()),
+                was_recommended: false,
+                created_at: Utc::now(),
+            },
+            "Ozark".to_string(),
+        ),
+    ];
 
-    let reviews = vec![SeriesRating {
-        series_id,
-        user_id,
-        rating: 9,
-    }];
-    let reviewed_series = vec![Series {
-        id: series_id,
-        title: "Breaking Bad".into(),
-        description: "A chemistry teacher turned drug lord.".into(),
-        genre: "Crime Drama".into(),
-        year: 2008,
-    }];
-
-    println!("Requesting recommendations based on Breaking Bad (rated 9/10)...\n");
-
-    match adapter.recommend(&reviews, &reviewed_series).await {
+    match adapter.recommend(&reviews).await {
         Ok(recs) => {
-            println!("Taste profile: {}\n", recs.taste_summary);
-            println!("=== Recommendations ===");
+            println!("✅ Taste profile: {}\n", recs.taste_summary);
             for (i, r) in recs.recommendations.iter().enumerate() {
                 println!(
-                    "{}. {} [{}] — confidence: {}%",
+                    "✅ {}. {} [{}] — confidence: {}%",
                     i + 1,
                     r.title,
                     r.genre,
@@ -40,6 +52,6 @@ async fn main() {
                 );
             }
         }
-        Err(e) => eprintln!("Error: {e}"),
+        Err(e) => println!("❌ Recommendation failed: {e}"),
     }
 }

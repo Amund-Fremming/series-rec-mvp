@@ -45,6 +45,12 @@ export default function HamburgerMenu({ currentScreen, onNavigate }) {
           >
             My Ratings
           </button>
+          <button
+            className={currentScreen === 'login' ? 'active' : ''}
+            onClick={() => navigate('login')}
+          >
+            Login
+          </button>
         </div>
       )}
     </div>

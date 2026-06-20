@@ -16,6 +16,14 @@ pub struct Review {
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct User {
+    pub id: Uuid,
+    pub username: String,
+    pub passcode: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Recommendation {
     pub id: Uuid,
     pub tmdb_series_id: i64,

@@ -1,13 +1,18 @@
 import { useState } from 'react';
 
 export function useUserId() {
-  const [userId] = useState(() => {
-    let id = localStorage.getItem('series_rec_user_id');
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem('series_rec_user_id', id);
+  const [userId, setUserIdState] = useState(() =>
+    sessionStorage.getItem('series_rec_user_id') ?? null
+  );
+
+  function setUserId(id) {
+    if (id) {
+      sessionStorage.setItem('series_rec_user_id', id);
+    } else {
+      sessionStorage.removeItem('series_rec_user_id');
     }
-    return id;
-  });
-  return userId;
+    setUserIdState(id);
+  }
+
+  return [userId, setUserId];
 }
