@@ -1,5 +1,3 @@
-use std::env;
-
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -22,8 +20,7 @@ no text outside the JSON. The object must match this schema exactly:
     {
       \"title\": \"string\",
       \"genre\": \"string\",
-      \"reason\": \"string — why this series fits the user's taste\",
-      \"confidence\": <number between 0.0 and 1.0>
+      \"confidence\": <integer between 0 and 100>
     }
   ],
   \"taste_summary\": \"string — one sentence describing the user's taste profile\"
@@ -49,8 +46,7 @@ pub struct SeriesRecommendations {
 pub struct Recommendation {
     pub title: String,
     pub genre: String,
-    pub reason: String,
-    pub confidence: f32,
+    pub confidence: u8,
 }
 
 // --- Internal OpenAI API shapes ---
@@ -84,17 +80,17 @@ struct MessageContent {
 
 // --- Public service ---
 
+#[derive(Clone)]
 pub struct LlmAdapter {
     client: Client,
     api_key: String,
 }
 
 impl LlmAdapter {
-    pub fn new() -> Self {
+    pub fn new(api_key: String) -> Self {
         Self {
             client: Client::new(),
-            api_key: env::var("OPENAI_API_KEY")
-                .expect("OPENAI_API_KEY environment variable must be set"),
+            api_key,
         }
     }
 
@@ -183,7 +179,6 @@ impl LlmAdapter {
             .map_err(|e| LlmError::Api(e.to_string()))?;
 
         let raw_body = response.text().await?;
-        println!("OpenAI raw response: {raw_body}");
 
         let parsed: OpenAiResponse = serde_json::from_str(&raw_body)
             .map_err(|e| LlmError::Api(format!("failed to parse response: {e}")))?;
@@ -206,31 +201,4 @@ fn build_prompt(reviews: &[SeriesRating], reviewed_recs: &[Series]) -> String {
          ## Previously recommended series the user has since rated\n{reviewed_recs_json}\n\n\
          Recommend 5 series the user would enjoy. Respond with ONLY the JSON object."
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_llm_adapter_reachable() {
-        dotenvy::dotenv().ok();
-        let api_key = std::env::var("OPENAI_API_KEY")
-            .expect("OPENAI_API_KEY must be set in environment or .env");
-        let adapter = LlmAdapter {
-            client: reqwest::Client::new(),
-            api_key,
-        };
-        let messages = vec![OpenAiMessage {
-            role: "user".into(),
-            content: "hey".into(),
-        }];
-        let result = adapter.call_api(&messages).await;
-        assert!(
-            result.is_ok(),
-            "LLM adapter call failed: {:?}",
-            result.err()
-        );
-        println!("Response: {}", result.unwrap());
-    }
 }

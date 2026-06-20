@@ -1,16 +1,19 @@
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
 use serde::Deserialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::Validate;
 
-use crate::models::{RateSeriesRequest, Series, SeriesRating};
-use crate::state::AppState;
+use crate::{
+    models::{RateSeriesRequest, Series, SeriesRating},
+    state::AppState,
+};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -109,10 +112,10 @@ pub async fn rate_series(
     State(_state): State<AppState>,
     Json(payload): Json<RateSeriesRequest>,
 ) -> impl IntoResponse {
-    if payload.rating == 0 || payload.rating > 10 {
+    if let Err(errors) = payload.validate() {
         return (
             StatusCode::UNPROCESSABLE_ENTITY,
-            Json(serde_json::json!({ "error": "rating must be between 1 and 10" })),
+            Json(serde_json::json!({ "error": errors })),
         );
     }
     let rating = SeriesRating {

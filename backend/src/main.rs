@@ -1,11 +1,7 @@
-mod handlers;
-mod llm_adapter;
-mod models;
-mod state;
-
-use crate::llm_adapter::{Recommendation, SeriesRecommendations};
-use crate::models::{RateSeriesRequest, Series, SeriesRating};
-use crate::state::AppState;
+use backend::adapters::llm::adapter::{Recommendation, SeriesRecommendations};
+use backend::api::handlers;
+use backend::models::{RateSeriesRequest, Series, SeriesRating};
+use backend::state::AppState;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -32,9 +28,13 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let state = AppState::from_pool(&database_url)
+    let openai_api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY must be set");
+    let tmdb_access_token =
+        std::env::var("TMDB_ACCESS_TOKEN").expect("TMDB_ACCESS_TOKEN must be set");
+
+    let state = AppState::new(&database_url, openai_api_key, tmdb_access_token)
         .await
-        .expect("failed to connect to database");
+        .expect("failed to initialise app state");
 
     let app = handlers::router()
         .with_state(state)

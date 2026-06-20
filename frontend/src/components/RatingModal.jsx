@@ -4,26 +4,26 @@ import StarRating from './StarRating';
 const STEPS = [
   {
     label: 'Step 1 of 3',
-    title: 'How did you hear about this series?',
-    placeholder: 'Friend recommendation, social media, saw it trending...',
-    field: 'howFound',
+    title: 'What did you especially like about this?',
+    placeholder: 'It was mysterious, never knew what really happened... Very futuristic and cool... Nostalgic and calm...',
+    field: 'liked',
   },
   {
     label: 'Step 2 of 3',
-    title: 'What did you think of it?',
-    placeholder: 'Share your thoughts, what stood out, would you recommend it...',
-    field: 'thoughts',
+    title: 'What did you not like about it?',
+    placeholder: 'It was mysterious, never knew what really happened... Very futuristic and cool... Nostalgic and calm...',
+    field: 'disliked',
   },
 ];
 
 export default function RatingModal({ series, onClose, onSubmit }) {
   const [step, setStep] = useState(1);
-  const [howFound, setHowFound] = useState('');
-  const [thoughts, setThoughts] = useState('');
+  const [liked, setLiked] = useState('');
+  const [disliked, setDisliked] = useState('');
   const [rating, setRating] = useState(0);
 
-  const values = { howFound, thoughts };
-  const setters = { howFound: setHowFound, thoughts: setThoughts };
+  const values = { liked, disliked };
+  const setters = { liked: setLiked, disliked: setDisliked };
 
   function handleNext() {
     if (step < 3) setStep((s) => s + 1);
@@ -34,7 +34,7 @@ export default function RatingModal({ series, onClose, onSubmit }) {
   }
 
   function handleSubmit() {
-    onSubmit({ howFound, thoughts, rating });
+    onSubmit({ liked, disliked, rating });
   }
 
   return (
