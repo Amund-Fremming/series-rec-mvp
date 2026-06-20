@@ -9,20 +9,26 @@ export default function SeriesDetailScreen({ series, onBack }) {
   const [showModal, setShowModal] = useState(false);
   const [userRating, setUserRating] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   async function handleSubmit(data) {
-    await saveReview({
-      series_id: crypto.randomUUID(),
-      user_id: userId,
-      tmdb_series_id: series.id,
-      // scale 0–5 star rating to 1–10 backend range
-      rating: Math.max(1, Math.round(data.rating * 2)),
-      liked: data.liked || undefined,
-      disliked: data.disliked || undefined,
-    });
-    setUserRating(data.rating);
-    setSubmitted(true);
-    setShowModal(false);
+    setSubmitError(null);
+    try {
+      await saveReview({
+        series_id: crypto.randomUUID(),
+        user_id: userId,
+        tmdb_series_id: series.id,
+        // scale 0–5 star rating to 1–10 backend range
+        rating: Math.max(1, Math.round(data.rating * 2)),
+        liked: data.liked || undefined,
+        disliked: data.disliked || undefined,
+      });
+      setUserRating(data.rating);
+      setSubmitted(true);
+      setShowModal(false);
+    } catch {
+      setSubmitError('Failed to save rating. Please try again.');
+    }
   }
 
   const poster = series.poster
@@ -57,6 +63,8 @@ export default function SeriesDetailScreen({ series, onBack }) {
           </div>
 
           <p className="detail-description">{series.description}</p>
+
+          {submitError && <p className="login-error">{submitError}</p>}
 
           {submitted && userRating !== null ? (
             <div className="detail-user-rating">

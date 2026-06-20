@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-export default function HamburgerMenu({ currentScreen, onNavigate }) {
+export default function HamburgerMenu({ currentScreen, onNavigate, userId, onLogout }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -45,12 +45,26 @@ export default function HamburgerMenu({ currentScreen, onNavigate }) {
           >
             My Ratings
           </button>
-          <button
-            className={currentScreen === 'login' ? 'active' : ''}
-            onClick={() => navigate('login')}
-          >
-            Login
-          </button>
+          {userId ? (
+            <button onClick={() => { setOpen(false); onLogout(); }}>
+              Log out
+            </button>
+          ) : (
+            <>
+              <button
+                className={currentScreen === 'login' ? 'active' : ''}
+                onClick={() => navigate('login')}
+              >
+                Login
+              </button>
+              <button
+                className={currentScreen === 'create-user' ? 'active' : ''}
+                onClick={() => navigate('create-user')}
+              >
+                Create Account
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

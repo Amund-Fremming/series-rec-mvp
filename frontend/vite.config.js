@@ -10,6 +10,7 @@ export default defineConfig({
       '/login': 'http://localhost:3000',
       '/health': 'http://localhost:3000',
       '/series': 'http://localhost:3000',
+      '/users': 'http://localhost:3000',
     },
   },
 })

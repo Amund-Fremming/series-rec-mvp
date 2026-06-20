@@ -610,6 +610,10 @@ body {
   color: var(--accent);
 }
 
+.error-state {
+  color: var(--accent);
+}
+
 .login-submit {
   width: 100%;
   justify-content: center;

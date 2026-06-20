@@ -6,7 +6,7 @@ use validator::Validate;
 
 use crate::adapters::db::models::Review;
 
-const DEFAULT_PAGE: u8 = 0;
+const DEFAULT_PAGE: u8 = 1;
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct Series {
@@ -74,6 +74,7 @@ pub struct PagedQuery {
 
 impl PagedQuery {
     pub fn page(&self) -> u8 {
-        self.page.unwrap_or(DEFAULT_PAGE)
+        let p = self.page.unwrap_or(DEFAULT_PAGE);
+        if p == 0 { 1 } else { p }
     }
 }

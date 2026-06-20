@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { login } from '../client';
+import { createUser } from '../client';
 
-export default function LoginScreen({ onLogin }) {
+export default function CreateUserScreen({ onLogin }) {
   const [username, setUsername] = useState('');
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState(null);
@@ -12,7 +12,7 @@ export default function LoginScreen({ onLogin }) {
     setError(null);
     setLoading(true);
     try {
-      const id = await login(username, passcode);
+      const id = await createUser({ username, passcode });
       onLogin(id);
     } catch (err) {
       setError(err.message);
@@ -24,7 +24,7 @@ export default function LoginScreen({ onLogin }) {
   return (
     <div className="login-screen">
       <form className="login-card" onSubmit={handleSubmit}>
-        <h2 className="login-title">Sign in</h2>
+        <h2 className="login-title">Create account</h2>
 
         <div className="login-field">
           <label className="login-label" htmlFor="username">Username</label>
@@ -48,7 +48,7 @@ export default function LoginScreen({ onLogin }) {
             type="password"
             value={passcode}
             onChange={(e) => setPasscode(e.target.value)}
-            autoComplete="current-password"
+            autoComplete="new-password"
             required
           />
         </div>
@@ -60,7 +60,7 @@ export default function LoginScreen({ onLogin }) {
           type="submit"
           disabled={loading}
         >
-          {loading ? 'Signing in…' : 'Sign in'}
+          {loading ? 'Creating account…' : 'Create account'}
         </button>
       </form>
     </div>

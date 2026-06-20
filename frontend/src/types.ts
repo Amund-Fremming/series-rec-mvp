@@ -32,6 +32,11 @@ export interface LoginRequest {
   passcode: string;
 }
 
+export interface CreateUserRequest {
+  username: string;
+  passcode: string;
+}
+
 // Mirrors adapters/db/dto.rs
 export interface RecommendationDto {
   id: string;

@@ -1,4 +1,4 @@
-import type { DisplaySeries, RecommendationDto, ReviewDto, ReviewRequest, SeriesListItem } from './types';
+import type { CreateUserRequest, DisplaySeries, RecommendationDto, ReviewDto, ReviewRequest, SeriesListItem } from './types';
 
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w300';
 
@@ -73,6 +73,17 @@ export async function saveReview(payload: ReviewRequest): Promise<ReviewDto> {
 export async function deleteReview(reviewId: string): Promise<void> {
   const res = await fetch(`/series/review/${reviewId}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(`API error ${res.status}`);
+}
+
+export async function createUser(payload: CreateUserRequest): Promise<string> {
+  const res = await fetch('/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (res.status === 409) throw new Error('Username already taken');
+  if (!res.ok) throw new Error('Failed to create account');
+  return res.json() as Promise<string>;
 }
 
 export async function getRecommendations(userId: string): Promise<RecommendationDto[]> {

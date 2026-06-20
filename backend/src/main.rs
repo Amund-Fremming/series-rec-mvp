@@ -3,6 +3,7 @@ use backend::adapters::llm::models::SeriesRecommendations;
 use backend::api::handlers;
 use backend::models::{ReviewDto, ReviewRequest, Series};
 use backend::state::AppState;
+use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -40,6 +41,7 @@ async fn main() {
         .expect("failed to initialise app state");
 
     let app = handlers::router()
+        .layer(TraceLayer::new_for_http())
         .with_state(state)
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()));
 
