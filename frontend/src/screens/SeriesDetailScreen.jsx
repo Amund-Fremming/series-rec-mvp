@@ -1,21 +1,32 @@
 import { useState } from 'react';
 import StarRating from '../components/StarRating';
 import RatingModal from '../components/RatingModal';
-import { rateSeries } from '../client';
+import { saveReview } from '../client';
 import { useUserId } from '../hooks/useUserId';
 
 export default function SeriesDetailScreen({ series, onBack }) {
   const [userId] = useUserId();
   const [showModal, setShowModal] = useState(false);
-  const [userRating, setUserRating] = useState(series.userRating ?? null);
-  const [submitted, setSubmitted] = useState(userRating !== null);
+  const [userRating, setUserRating] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
 
   async function handleSubmit(data) {
-    await rateSeries(userId, series.id, data);
+    await saveReview({
+      series_id: crypto.randomUUID(),
+      user_id: userId,
+      tmdb_series_id: series.id,
+      // scale 0–5 star rating to 1–10 backend range
+      rating: Math.max(1, Math.round(data.rating * 2)),
+      liked: data.liked || undefined,
+      disliked: data.disliked || undefined,
+    });
     setUserRating(data.rating);
     setSubmitted(true);
     setShowModal(false);
   }
+
+  const poster = series.poster
+    ?? `https://placehold.co/200x300/1a1a1a/ffffff?text=${encodeURIComponent(series.title.slice(0, 2).toUpperCase())}`;
 
   return (
     <div className="screen">
@@ -26,21 +37,18 @@ export default function SeriesDetailScreen({ series, onBack }) {
       <div className="detail-layout">
         <img
           className="detail-poster"
-          src={series.poster}
+          src={poster}
           alt={series.title}
         />
 
         <div className="detail-info">
           <div className="detail-header">
             <h1 className="detail-title">{series.title}</h1>
-            <span className="detail-year">{series.year}</span>
+            {series.year && <span className="detail-year">{series.year}</span>}
           </div>
 
           <div className="detail-meta">
-            <span className="detail-meta-chip detail-meta-rating">★ {series.rating}</span>
-            <span className="detail-meta-chip">
-              {series.seasons} {series.seasons === 1 ? 'season' : 'seasons'}
-            </span>
+            <span className="detail-meta-chip detail-meta-rating">★ {series.rating.toFixed(1)}</span>
             {series.genre.map((g) => (
               <span key={g} className="detail-meta-chip">
                 {g}
@@ -68,8 +76,9 @@ export default function SeriesDetailScreen({ series, onBack }) {
             <button
               className="btn btn-primary btn-mt"
               onClick={() => setShowModal(true)}
+              disabled={!userId}
             >
-              Rate this series
+              {userId ? 'Rate this series' : 'Log in to rate'}
             </button>
           )}
         </div>

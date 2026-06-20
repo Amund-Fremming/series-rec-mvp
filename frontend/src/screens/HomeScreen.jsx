@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import SeriesCard from '../components/SeriesCard';
-import { getFirstPage, search } from '../client';
+import { getSeriesPage, searchSeries } from '../client';
 
 export default function HomeScreen({ onSelectSeries }) {
   const [query, setQuery] = useState('');
@@ -8,7 +8,7 @@ export default function HomeScreen({ onSelectSeries }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getFirstPage().then((data) => {
+    getSeriesPage().then((data) => {
       setSeries(data);
       setLoading(false);
     });
@@ -16,11 +16,11 @@ export default function HomeScreen({ onSelectSeries }) {
 
   useEffect(() => {
     if (query.trim() === '') {
-      getFirstPage().then(setSeries);
+      getSeriesPage().then(setSeries);
       return;
     }
     const timer = setTimeout(() => {
-      search(query).then(setSeries);
+      searchSeries(query).then(setSeries);
     }, 250);
     return () => clearTimeout(timer);
   }, [query]);

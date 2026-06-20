@@ -1,23 +1,26 @@
 import StarRating from './StarRating';
 
 export default function SeriesCard({ series, onClick, userRating }) {
+  const poster = series.poster
+    ?? `https://placehold.co/200x300/1a1a1a/ffffff?text=${encodeURIComponent(series.title.slice(0, 2).toUpperCase())}`;
+
   return (
     <div className="series-card" onClick={onClick} role="button" tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && onClick?.()}>
-      <PosterImage src={series.poster} title={series.title} />
+      <PosterImage src={poster} title={series.title} />
       <div className="series-card-info">
         <div className="series-card-header">
           <h3 className="series-card-title">{series.title}</h3>
-          <span className="series-card-year">{series.year}</span>
+          {series.year && <span className="series-card-year">{series.year}</span>}
         </div>
         <div className="series-card-meta">
-          <span className="series-card-rating">★ {series.rating}</span>
-          <span className="series-card-dot">·</span>
-          <span>
-            {series.seasons} {series.seasons === 1 ? 'season' : 'seasons'}
-          </span>
-          <span className="series-card-dot">·</span>
-          <span>{series.genre.join(', ')}</span>
+          <span className="series-card-rating">★ {series.rating.toFixed(1)}</span>
+          {series.genre.length > 0 && (
+            <>
+              <span className="series-card-dot">·</span>
+              <span>{series.genre.slice(0, 3).join(', ')}</span>
+            </>
+          )}
         </div>
         <p className="series-card-description">{series.description}</p>
         {userRating !== undefined && (

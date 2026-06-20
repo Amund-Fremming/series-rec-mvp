@@ -6,5 +6,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 9002,
+    proxy: {
+      '/login': 'http://localhost:3000',
+      '/health': 'http://localhost:3000',
+      '/series': 'http://localhost:3000',
+    },
   },
 })

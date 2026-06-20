@@ -31,7 +31,7 @@ export default function App() {
       </header>
 
       {screen === 'home' && <HomeScreen onSelectSeries={selectSeries} />}
-      {screen === 'rated' && <RatedScreen onSelectSeries={selectSeries} />}
+      {screen === 'rated' && <RatedScreen />}
       {screen === 'login' && <LoginScreen onSuccess={() => navigateTo('home')} />}
       {screen === 'detail' && selectedSeries && (
         <SeriesDetailScreen
