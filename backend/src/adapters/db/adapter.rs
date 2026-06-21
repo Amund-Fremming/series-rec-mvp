@@ -11,6 +11,9 @@ pub enum DbError {
 
     #[error("Username already exists: {0}")]
     UsernameConflict(String),
+
+    #[error("Not found")]
+    NotFound,
 }
 
 #[derive(Clone)]
@@ -149,6 +152,33 @@ impl DbAdapter {
         .await?;
 
         Ok(recs)
+    }
+
+    pub async fn update_review(
+        &self,
+        id: Uuid,
+        rating: i16,
+        liked: Option<String>,
+        disliked: Option<String>,
+    ) -> Result<Review, DbError> {
+        let review = sqlx::query_as!(
+            Review,
+            r#"
+            UPDATE reviews
+            SET rating = $2, liked = $3, disliked = $4
+            WHERE id = $1
+            RETURNING id, series_id, user_id, tmdb_series_id, rating, liked, disliked, was_recommended as "was_recommended!", created_at
+            "#,
+            id,
+            rating,
+            liked,
+            disliked,
+        )
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or(DbError::NotFound)?;
+
+        Ok(review)
     }
 
     pub async fn delete_review(&self, id: Uuid) -> Result<(), DbError> {

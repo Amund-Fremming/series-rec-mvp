@@ -2,7 +2,7 @@ import { useState } from 'react';
 import SeriesCard from '../components/SeriesCard';
 import { generateRecommendations } from '../client';
 
-export default function RecommendationsScreen({ userId, onSelectSeries }) {
+export default function RecommendationsScreen({ userId, onSelectSeries, onLoginRequired }) {
   const [recs, setRecs] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -29,7 +29,9 @@ export default function RecommendationsScreen({ userId, onSelectSeries }) {
 
       {!userId ? (
         <div className="empty-state">
-          Log in to generate recommendations.
+          <button className="btn btn-primary" onClick={onLoginRequired}>
+            Log in to see recommendations
+          </button>
         </div>
       ) : (
         <>

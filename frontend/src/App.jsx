@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useUserId } from './hooks/useUserId';
 import HamburgerMenu from './components/HamburgerMenu';
+import LoginModal from './components/LoginModal';
 import HomeScreen from './screens/HomeScreen';
 import RatedScreen from './screens/RatedScreen';
 import SeriesDetailScreen from './screens/SeriesDetailScreen';
+import ReviewDetailScreen from './screens/ReviewDetailScreen';
 import LoginScreen from './screens/LoginScreen';
 import CreateUserScreen from './screens/CreateUserScreen';
 import RecommendationsScreen from './screens/RecommendationsScreen';
@@ -11,12 +13,15 @@ import RecommendationsScreen from './screens/RecommendationsScreen';
 export default function App() {
   const [screen, setScreen] = useState('home');
   const [selectedSeries, setSelectedSeries] = useState(null);
+  const [selectedReview, setSelectedReview] = useState(null);
   const [prevScreen, setPrevScreen] = useState('home');
   const [userId, setUserId] = useUserId();
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   function navigateTo(newScreen) {
     setScreen(newScreen);
     setSelectedSeries(null);
+    setSelectedReview(null);
   }
 
   function selectSeries(series) {
@@ -25,14 +30,31 @@ export default function App() {
     setScreen('detail');
   }
 
+  function selectReview(series, review) {
+    setPrevScreen(screen);
+    setSelectedSeries(series);
+    setSelectedReview(review);
+    setScreen('review-detail');
+  }
+
   function handleLogin(id) {
     setUserId(id);
+    setShowLoginModal(false);
     navigateTo('home');
+  }
+
+  function handleModalLogin(id) {
+    setUserId(id);
+    setShowLoginModal(false);
   }
 
   function handleLogout() {
     setUserId(null);
     navigateTo('home');
+  }
+
+  function handleLoginRequired() {
+    setShowLoginModal(true);
   }
 
   const headerTitle =
@@ -54,9 +76,15 @@ export default function App() {
       </header>
 
       {screen === 'home' && <HomeScreen onSelectSeries={selectSeries} />}
-      {screen === 'rated' && <RatedScreen userId={userId} />}
+      {screen === 'rated' && (
+        <RatedScreen userId={userId} onSelectReview={selectReview} />
+      )}
       {screen === 'recommendations' && (
-        <RecommendationsScreen userId={userId} onSelectSeries={selectSeries} />
+        <RecommendationsScreen
+          userId={userId}
+          onSelectSeries={selectSeries}
+          onLoginRequired={handleLoginRequired}
+        />
       )}
       {screen === 'login' && <LoginScreen onLogin={handleLogin} />}
       {screen === 'create-user' && <CreateUserScreen onLogin={handleLogin} />}
@@ -64,6 +92,22 @@ export default function App() {
         <SeriesDetailScreen
           series={selectedSeries}
           onBack={() => navigateTo(prevScreen)}
+          onLoginRequired={handleLoginRequired}
+        />
+      )}
+      {screen === 'review-detail' && selectedSeries && selectedReview && (
+        <ReviewDetailScreen
+          series={selectedSeries}
+          review={selectedReview}
+          onBack={() => navigateTo(prevScreen)}
+        />
+      )}
+
+      {showLoginModal && (
+        <LoginModal
+          onLogin={handleModalLogin}
+          onClose={() => setShowLoginModal(false)}
+          onRegister={() => { setShowLoginModal(false); navigateTo('create-user'); }}
         />
       )}
     </>

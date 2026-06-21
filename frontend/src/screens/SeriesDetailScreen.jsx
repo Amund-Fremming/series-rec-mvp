@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import StarRating from '../components/StarRating';
 import RatingModal from '../components/RatingModal';
-import { saveReview, deleteReview, getUserReview } from '../client';
+import { saveReview, updateReview, getUserReview } from '../client';
 import { useUserId } from '../hooks/useUserId';
 
-export default function SeriesDetailScreen({ series, onBack }) {
+export default function SeriesDetailScreen({ series, onBack, onLoginRequired }) {
   const [userId] = useUserId();
   const [showModal, setShowModal] = useState(false);
   const [existingReview, setExistingReview] = useState(null);
@@ -22,17 +22,19 @@ export default function SeriesDetailScreen({ series, onBack }) {
   async function handleSubmit(data) {
     setSubmitError(null);
     try {
-      if (existingReview) {
-        await deleteReview(existingReview.id);
-      }
-      const saved = await saveReview({
-        series_id: crypto.randomUUID(),
-        user_id: userId,
-        tmdb_series_id: series.id,
-        rating: Math.max(1, Math.round(data.rating * 2)),
-        liked: data.liked || undefined,
-        disliked: data.disliked || undefined,
-      });
+      const rating = Math.max(1, Math.round(data.rating * 2));
+      const liked = data.liked || undefined;
+      const disliked = data.disliked || undefined;
+      const saved = existingReview
+        ? await updateReview(existingReview.id, { rating, liked, disliked })
+        : await saveReview({
+            series_id: crypto.randomUUID(),
+            user_id: userId,
+            tmdb_series_id: series.id,
+            rating,
+            liked,
+            disliked,
+          });
       setExistingReview(saved);
       setShowModal(false);
     } catch {
@@ -99,8 +101,7 @@ export default function SeriesDetailScreen({ series, onBack }) {
           ) : (
             <button
               className="btn btn-primary btn-mt"
-              onClick={() => setShowModal(true)}
-              disabled={!userId}
+              onClick={() => userId ? setShowModal(true) : onLoginRequired?.()}
             >
               {userId ? 'Rate this series' : 'Log in to rate'}
             </button>

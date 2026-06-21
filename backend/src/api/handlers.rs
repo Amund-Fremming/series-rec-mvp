@@ -13,7 +13,7 @@ use validator::Validate;
 use crate::{
     adapters::{db::dto::RecommendationDto, tmdb::models::SeriesListItem},
     errors::AppError,
-    models::{CreateUserRequest, LoginRequest, PagedQuery, ReviewDto, ReviewRequest, Series},
+    models::{CreateUserRequest, LoginRequest, PagedQuery, ReviewDto, ReviewRequest, Series, UpdateReviewRequest},
     state::AppState,
 };
 
@@ -24,7 +24,7 @@ pub fn router() -> Router<AppState> {
         .route("/series", get(get_series_page))
         .route("/series/search", get(search_series))
         .route("/series/review", get(get_user_review).post(save_review))
-        .route("/series/review/{review_id}", delete(delete_review))
+        .route("/series/review/{review_id}", delete(delete_review).patch(patch_review))
         .route("/series/reviews/{user_id}", get(get_user_reviews))
         .route("/series/{tmdb_id}", get(get_series_by_tmdb_id))
         .route(
@@ -67,19 +67,12 @@ pub async fn get_series_page(
     Ok((StatusCode::OK, Json(page)))
 }
 
-#[utoipa::path(get, path = "/series/search", params(("q" = String, Query, description = "Search query")), responses((status = 200, description = "Matching series", body = Vec<Series>)), tag = "series")]
+#[utoipa::path(get, path = "/series/search", params(("q" = String, Query, description = "Search query")), responses((status = 200, description = "Matching series", body = Vec<SeriesListItem>)), tag = "series")]
 pub async fn search_series(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Query(params): Query<SearchParams>,
 ) -> Result<impl IntoResponse, AppError> {
-    let results = vec![Series {
-        id: Uuid::new_v4(),
-        title: format!("Result for '{}'", params.q),
-        description: "Placeholder result.".to_string(),
-        genre: "Unknown".to_string(),
-        year: 2020,
-    }];
-
+    let results = state.tmdb.search_series(&params.q).await?;
     Ok((StatusCode::OK, Json(results)))
 }
 
@@ -140,6 +133,24 @@ pub async fn delete_review(
     state.db.delete_review(review_id).await?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[utoipa::path(patch, path = "/series/review/{review_id}", request_body = UpdateReviewRequest, params(("review_id" = Uuid, Path, description = "Review UUID")), responses((status = 200, description = "Updated review", body = ReviewDto), (status = 404, description = "Review not found")), tag = "series")]
+pub async fn patch_review(
+    State(state): State<AppState>,
+    Path(review_id): Path<Uuid>,
+    Json(payload): Json<UpdateReviewRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    if let Err(errors) = payload.validate() {
+        return Err(AppError::ValidationError(errors.to_string()));
+    }
+
+    let review = state
+        .db
+        .update_review(review_id, payload.rating, payload.liked, payload.disliked)
+        .await?;
+
+    Ok((StatusCode::OK, Json(ReviewDto::from(review))))
 }
 
 #[utoipa::path(get, path = "/series/reviews/{user_id}", params(("user_id" = Uuid, Path, description = "User UUID")), responses((status = 200, description = "All reviews for user", body = Vec<ReviewDto>)), tag = "series")]

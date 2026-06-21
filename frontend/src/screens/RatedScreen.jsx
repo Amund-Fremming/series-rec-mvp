@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
-import StarRating from '../components/StarRating';
+import SeriesCard from '../components/SeriesCard';
 import { getUserReviews, getSeriesById } from '../client';
 
-const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w92';
-
-export default function RatedScreen({ userId }) {
+export default function RatedScreen({ userId, onSelectReview }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,16 +17,16 @@ export default function RatedScreen({ userId }) {
       .then(async (reviews) => {
         const enriched = await Promise.all(
           reviews.map(async (review) => {
-            if (!review.tmdb_series_id) return { review, series: null };
+            if (!review.tmdb_series_id) return null;
             try {
               const series = await getSeriesById(review.tmdb_series_id);
               return { review, series };
             } catch {
-              return { review, series: null };
+              return null;
             }
           })
         );
-        setItems(enriched);
+        setItems(enriched.filter(Boolean));
         setLoading(false);
       })
       .catch(() => {
@@ -59,39 +57,15 @@ export default function RatedScreen({ userId }) {
           No ratings yet. Find a series on the home screen and rate it.
         </div>
       ) : (
-        <div className="review-list">
-          {items.map(({ review, series }) => {
-            const displayRating = review.rating / 2;
-            const title = series?.name ?? `Series #${review.tmdb_series_id}`;
-            const poster = series?.poster_path
-              ? `${TMDB_IMAGE_BASE}${series.poster_path}`
-              : null;
-
-            return (
-              <div key={review.id} className="review-card">
-                {poster && (
-                  <img className="review-card-poster" src={poster} alt={title} />
-                )}
-                <div className="review-card-body">
-                  <div className="review-card-title">{title}</div>
-                  <div className="review-card-rating">
-                    <StarRating value={displayRating} readOnly size={18} />
-                    <span className="review-card-rating-value">{displayRating} / 5</span>
-                  </div>
-                  {review.liked && (
-                    <p className="review-sentiment">
-                      <span className="review-label">Liked:</span> {review.liked}
-                    </p>
-                  )}
-                  {review.disliked && (
-                    <p className="review-sentiment">
-                      <span className="review-label">Disliked:</span> {review.disliked}
-                    </p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+        <div className="series-list">
+          {items.map(({ review, series }) => (
+            <SeriesCard
+              key={review.id}
+              series={series}
+              userRating={review.rating / 2}
+              onClick={() => onSelectReview(series, review)}
+            />
+          ))}
         </div>
       )}
     </div>

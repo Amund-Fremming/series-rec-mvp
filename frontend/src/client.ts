@@ -75,6 +75,17 @@ export async function deleteReview(reviewId: string): Promise<void> {
   if (!res.ok) throw new Error(`API error ${res.status}`);
 }
 
+export async function updateReview(
+  reviewId: string,
+  payload: { rating: number; liked?: string; disliked?: string },
+): Promise<ReviewDto> {
+  return apiFetch<ReviewDto>(`/series/review/${reviewId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function createUser(payload: CreateUserRequest): Promise<string> {
   const res = await fetch('/users', {
     method: 'POST',
@@ -94,8 +105,18 @@ export async function getUserReviews(userId: string): Promise<ReviewDto[]> {
   return apiFetch<ReviewDto[]>(`/series/reviews/${userId}`);
 }
 
-export async function getSeriesById(tmdbId: number): Promise<TmdbSeriesDetails> {
-  return apiFetch<TmdbSeriesDetails>(`/series/${tmdbId}`);
+export async function getSeriesById(tmdbId: number): Promise<DisplaySeries> {
+  const d = await apiFetch<TmdbSeriesDetails>(`/series/${tmdbId}`);
+  const year = d.first_air_date ? parseInt(d.first_air_date.slice(0, 4), 10) : null;
+  return {
+    id: d.id,
+    title: d.name,
+    description: d.overview,
+    year,
+    rating: d.vote_average,
+    genre: d.genres.map((g) => g.name),
+    poster: d.poster_path ? `${TMDB_IMAGE_BASE}${d.poster_path}` : null,
+  };
 }
 
 export async function getRecommendations(userId: string): Promise<RecommendationDto[]> {

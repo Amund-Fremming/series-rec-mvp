@@ -53,6 +53,7 @@ impl From<DbError> for AppError {
             DbError::UsernameConflict(u) => {
                 AppError::Conflict(format!("username '{u}' already exists"))
             }
+            DbError::NotFound => AppError::NotFound,
             _ => AppError::Db(e),
         }
     }

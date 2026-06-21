@@ -57,6 +57,14 @@ impl From<Review> for ReviewDto {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, ToSchema, Validate)]
+pub struct UpdateReviewRequest {
+    #[validate(range(min = 1, max = 10))]
+    pub rating: i16,
+    pub liked: Option<String>,
+    pub disliked: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct CreateUserRequest {
     pub username: String,

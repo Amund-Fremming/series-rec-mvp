@@ -75,6 +75,10 @@ export interface SeriesRecommendations {
 export interface TmdbSeriesDetails {
   id: number;
   name: string;
+  overview: string;
+  first_air_date: string | null;
+  vote_average: number;
+  genres: { id: number; name: string }[];
   poster_path: string | null;
 }
 
