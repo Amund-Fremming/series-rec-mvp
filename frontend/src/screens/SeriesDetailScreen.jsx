@@ -1,9 +1,15 @@
-import { useState, useEffect } from 'react';
-import StarRating from '../components/StarRating';
-import RatingModal from '../components/RatingModal';
-import { saveReview, updateReview, getUserReview } from '../client';
+import { useState, useEffect } from "react";
+import StarRating from "../components/StarRating";
+import RatingModal from "../components/RatingModal";
+import { saveReview, updateReview, getUserReview } from "../client";
+import { useUserId } from "../hooks/useUserId";
 
-export default function SeriesDetailScreen({ series, userId, onBack, onLoginRequired }) {
+export default function SeriesDetailScreen({
+  series,
+  onBack,
+  onLoginRequired,
+}) {
+  const [userId] = useUserId();
   const [showModal, setShowModal] = useState(false);
   const [existingReview, setExistingReview] = useState(null);
   const [reviewLoading, setReviewLoading] = useState(false);
@@ -13,7 +19,10 @@ export default function SeriesDetailScreen({ series, userId, onBack, onLoginRequ
     if (!userId) return;
     setReviewLoading(true);
     getUserReview(userId, series.id)
-      .then((review) => { setExistingReview(review); setReviewLoading(false); })
+      .then((review) => {
+        setExistingReview(review);
+        setReviewLoading(false);
+      })
       .catch(() => setReviewLoading(false));
   }, [userId, series.id]);
 
@@ -36,12 +45,13 @@ export default function SeriesDetailScreen({ series, userId, onBack, onLoginRequ
       setExistingReview(saved);
       setShowModal(false);
     } catch {
-      setSubmitError('Failed to save rating. Please try again.');
+      setSubmitError("Failed to save rating. Please try again.");
     }
   }
 
-  const poster = series.poster
-    ?? `https://placehold.co/200x300/1a1a1a/ffffff?text=${encodeURIComponent(series.title.slice(0, 2).toUpperCase())}`;
+  const poster =
+    series.poster ??
+    `https://placehold.co/200x300/1a1a1a/ffffff?text=${encodeURIComponent(series.title.slice(0, 2).toUpperCase())}`;
 
   const displayRating = existingReview ? existingReview.rating / 2 : null;
 
@@ -52,11 +62,7 @@ export default function SeriesDetailScreen({ series, userId, onBack, onLoginRequ
       </button>
 
       <div className="detail-layout">
-        <img
-          className="detail-poster"
-          src={poster}
-          alt={series.title}
-        />
+        <img className="detail-poster" src={poster} alt={series.title} />
 
         <div className="detail-info">
           <div className="detail-header">
@@ -65,7 +71,9 @@ export default function SeriesDetailScreen({ series, userId, onBack, onLoginRequ
           </div>
 
           <div className="detail-meta">
-            <span className="detail-meta-chip detail-meta-rating">★ {series.rating.toFixed(1)}</span>
+            <span className="detail-meta-chip detail-meta-rating">
+              ★ {series.rating.toFixed(1)}
+            </span>
             {series.genre.map((g) => (
               <span key={g} className="detail-meta-chip">
                 {g}
@@ -84,13 +92,21 @@ export default function SeriesDetailScreen({ series, userId, onBack, onLoginRequ
               <div className="muted-label">Your review</div>
               <div className="detail-user-rating-row">
                 <StarRating value={displayRating} readOnly size={24} />
-                <span className="detail-user-rating-value">{displayRating} / 5</span>
+                <span className="detail-user-rating-value">
+                  {displayRating} / 5
+                </span>
               </div>
               {existingReview.liked && (
-                <p className="review-sentiment"><span className="review-label">Liked:</span> {existingReview.liked}</p>
+                <p className="review-sentiment">
+                  <span className="review-label">Liked:</span>{" "}
+                  {existingReview.liked}
+                </p>
               )}
               {existingReview.disliked && (
-                <p className="review-sentiment"><span className="review-label">Disliked:</span> {existingReview.disliked}</p>
+                <p className="review-sentiment">
+                  <span className="review-label">Disliked:</span>{" "}
+                  {existingReview.disliked}
+                </p>
               )}
               <button className="btn btn-mt" onClick={() => setShowModal(true)}>
                 Update review
@@ -99,9 +115,11 @@ export default function SeriesDetailScreen({ series, userId, onBack, onLoginRequ
           ) : (
             <button
               className="btn btn-primary btn-mt"
-              onClick={() => userId ? setShowModal(true) : onLoginRequired?.()}
+              onClick={() =>
+                userId ? setShowModal(true) : onLoginRequired?.()
+              }
             >
-              {userId ? 'Rate this series' : 'Log in to rate'}
+              {userId ? "Rate this series" : "Log in to rate"}
             </button>
           )}
         </div>
@@ -110,11 +128,15 @@ export default function SeriesDetailScreen({ series, userId, onBack, onLoginRequ
       {showModal && (
         <RatingModal
           series={series}
-          initialData={existingReview ? {
-            rating: displayRating,
-            liked: existingReview.liked ?? '',
-            disliked: existingReview.disliked ?? '',
-          } : undefined}
+          initialData={
+            existingReview
+              ? {
+                  rating: displayRating,
+                  liked: existingReview.liked ?? "",
+                  disliked: existingReview.disliked ?? "",
+                }
+              : undefined
+          }
           onClose={() => setShowModal(false)}
           onSubmit={handleSubmit}
         />

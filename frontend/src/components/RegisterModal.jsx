@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { login } from '../client';
+import { createUser } from '../client';
 
-export default function LoginModal({ onLogin, onClose, onRegister }) {
+export default function RegisterModal({ onLogin, onClose, onBackToLogin }) {
   const [username, setUsername] = useState('');
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState(null);
@@ -12,7 +12,7 @@ export default function LoginModal({ onLogin, onClose, onRegister }) {
     setError(null);
     setLoading(true);
     try {
-      const id = await login(username, passcode);
+      const id = await createUser({ username, passcode });
       onLogin(id);
     } catch (err) {
       setError(err.message);
@@ -25,12 +25,12 @@ export default function LoginModal({ onLogin, onClose, onRegister }) {
     <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <form className="modal login-modal" onSubmit={handleSubmit}>
         <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close">×</button>
-        <h2 className="modal-title">Sign in</h2>
+        <h2 className="modal-title">Create account</h2>
 
         <div className="login-field">
-          <label className="login-label" htmlFor="modal-username">Username</label>
+          <label className="login-label" htmlFor="reg-username">Username</label>
           <input
-            id="modal-username"
+            id="reg-username"
             className="login-input"
             type="text"
             value={username}
@@ -42,14 +42,14 @@ export default function LoginModal({ onLogin, onClose, onRegister }) {
         </div>
 
         <div className="login-field">
-          <label className="login-label" htmlFor="modal-passcode">Passcode</label>
+          <label className="login-label" htmlFor="reg-passcode">Passcode</label>
           <input
-            id="modal-passcode"
+            id="reg-passcode"
             className="login-input"
             type="password"
             value={passcode}
             onChange={(e) => setPasscode(e.target.value)}
-            autoComplete="current-password"
+            autoComplete="new-password"
             required
           />
         </div>
@@ -61,13 +61,13 @@ export default function LoginModal({ onLogin, onClose, onRegister }) {
           type="submit"
           disabled={loading}
         >
-          {loading ? 'Signing in…' : 'Sign in'}
+          {loading ? 'Creating account…' : 'Create account'}
         </button>
 
         <p className="login-modal-register">
-          Don't have an account?{' '}
-          <button type="button" className="link-btn" onClick={onRegister}>
-            Register here
+          Already have an account?{' '}
+          <button type="button" className="link-btn" onClick={onBackToLogin}>
+            Sign in
           </button>
         </p>
       </form>
