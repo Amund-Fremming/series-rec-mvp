@@ -1,6 +1,7 @@
 import StarRating from '../components/StarRating';
+import { PosterImage } from '../components/SeriesCard';
 
-export default function ReviewDetailScreen({ series, review, onBack }) {
+export default function ReviewDetailScreen({ series, review, onBack, onViewSeries }) {
   const displayRating = review.rating / 2;
 
   const poster = series.poster
@@ -13,22 +14,13 @@ export default function ReviewDetailScreen({ series, review, onBack }) {
       </button>
 
       <div className="detail-layout">
-        <img className="detail-poster" src={poster} alt={series.title} />
+        <PosterImage src={poster} title={series.title} className="detail-poster" />
 
         <div className="detail-info">
           <div className="detail-header">
             <h1 className="detail-title">{series.title}</h1>
             {series.year && <span className="detail-year">{series.year}</span>}
           </div>
-
-          <div className="detail-meta">
-            <span className="detail-meta-chip detail-meta-rating">★ {series.rating.toFixed(1)}</span>
-            {series.genre.map((g) => (
-              <span key={g} className="detail-meta-chip">{g}</span>
-            ))}
-          </div>
-
-          <p className="detail-description">{series.description}</p>
 
           <div className="detail-user-rating">
             <div className="muted-label">Your rating</div>
@@ -51,6 +43,10 @@ export default function ReviewDetailScreen({ series, review, onBack }) {
               </div>
             )}
           </div>
+
+          <button className="btn btn-mt" onClick={onViewSeries}>
+            View series →
+          </button>
         </div>
       </div>
     </div>

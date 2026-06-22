@@ -24,6 +24,10 @@ export default function App() {
     setSelectedReview(null);
   }
 
+  function goBack() {
+    setScreen(prevScreen);
+  }
+
   function selectSeries(series) {
     setPrevScreen(screen);
     setSelectedSeries(series);
@@ -91,7 +95,8 @@ export default function App() {
       {screen === 'detail' && selectedSeries && (
         <SeriesDetailScreen
           series={selectedSeries}
-          onBack={() => navigateTo(prevScreen)}
+          userId={userId}
+          onBack={goBack}
           onLoginRequired={handleLoginRequired}
         />
       )}
@@ -99,7 +104,8 @@ export default function App() {
         <ReviewDetailScreen
           series={selectedSeries}
           review={selectedReview}
-          onBack={() => navigateTo(prevScreen)}
+          onBack={goBack}
+          onViewSeries={() => selectSeries(selectedSeries)}
         />
       )}
 

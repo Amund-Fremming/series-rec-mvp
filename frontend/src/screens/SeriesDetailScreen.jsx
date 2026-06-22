@@ -2,10 +2,8 @@ import { useState, useEffect } from 'react';
 import StarRating from '../components/StarRating';
 import RatingModal from '../components/RatingModal';
 import { saveReview, updateReview, getUserReview } from '../client';
-import { useUserId } from '../hooks/useUserId';
 
-export default function SeriesDetailScreen({ series, onBack, onLoginRequired }) {
-  const [userId] = useUserId();
+export default function SeriesDetailScreen({ series, userId, onBack, onLoginRequired }) {
   const [showModal, setShowModal] = useState(false);
   const [existingReview, setExistingReview] = useState(null);
   const [reviewLoading, setReviewLoading] = useState(false);

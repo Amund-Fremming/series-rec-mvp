@@ -63,6 +63,7 @@ export default function RatedScreen({ userId, onSelectReview }) {
               key={review.id}
               series={series}
               userRating={review.rating / 2}
+              compact
               onClick={() => onSelectReview(series, review)}
             />
           ))}
