@@ -125,16 +125,35 @@ impl DbAdapter {
         Ok(review)
     }
 
-    pub async fn save_recommendation(&self, tmdb_series_id: i64) -> Result<(), DbError> {
+    pub async fn save_recommendation(
+        &self,
+        tmdb_series_id: i64,
+        confidence: i16,
+    ) -> Result<(), DbError> {
+        // Re-recommending a series should surface it as new: drop any earlier row
+        // for the same series and insert a fresh one so created_at and confidence
+        // reflect the latest generation. Done in a transaction to stay atomic.
+        let mut tx = self.pool.begin().await?;
+
         sqlx::query!(
-            r#"
-            INSERT INTO recommendations (tmdb_series_id)
-            VALUES ($1)
-            "#,
+            r#"DELETE FROM recommendations WHERE tmdb_series_id = $1"#,
             tmdb_series_id,
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+
+        sqlx::query!(
+            r#"
+            INSERT INTO recommendations (tmdb_series_id, confidence)
+            VALUES ($1, $2)
+            "#,
+            tmdb_series_id,
+            confidence,
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
 
         Ok(())
     }
@@ -143,7 +162,7 @@ impl DbAdapter {
         let recs = sqlx::query_as!(
             Recommendation,
             r#"
-            SELECT id, tmdb_series_id, created_at
+            SELECT id, tmdb_series_id, confidence, created_at
             FROM recommendations
             ORDER BY created_at DESC
             "#,

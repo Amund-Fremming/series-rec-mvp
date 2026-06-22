@@ -3,20 +3,24 @@ import StarRating from "../components/StarRating";
 import RatingModal from "../components/RatingModal";
 import { saveReview, updateReview, getUserReview } from "../client";
 import { useUserId } from "../hooks/useUserId";
+import { useAppData } from "../hooks/useAppData";
 
 export default function SeriesDetailScreen({
   series,
   onBack,
-  onLoginRequired,
+  onAuth,
 }) {
-  const [userId] = useUserId();
+  const { userId, isLoggedIn } = useUserId();
+  const { reviews } = useAppData();
   const [showModal, setShowModal] = useState(false);
   const [existingReview, setExistingReview] = useState(null);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
+  // Re-runs the moment the user logs in (isLoggedIn flips via the shared hook),
+  // so the screen loads their review and swaps the call-to-action without a reload.
   useEffect(() => {
-    if (!userId) return;
+    if (!isLoggedIn) return;
     setReviewLoading(true);
     getUserReview(userId, series.id)
       .then((review) => {
@@ -24,7 +28,7 @@ export default function SeriesDetailScreen({
         setReviewLoading(false);
       })
       .catch(() => setReviewLoading(false));
-  }, [userId, series.id]);
+  }, [isLoggedIn, userId, series.id]);
 
   async function handleSubmit(data) {
     setSubmitError(null);
@@ -44,6 +48,8 @@ export default function SeriesDetailScreen({
           });
       setExistingReview(saved);
       setShowModal(false);
+      // Keep the cached "My Ratings" list in sync with the new/updated review.
+      reviews.refresh();
     } catch {
       setSubmitError("Failed to save rating. Please try again.");
     }
@@ -112,14 +118,20 @@ export default function SeriesDetailScreen({
                 Update review
               </button>
             </div>
-          ) : (
+          ) : isLoggedIn ? (
             <button
               className="btn btn-primary btn-mt"
-              onClick={() =>
-                userId ? setShowModal(true) : onLoginRequired?.()
-              }
+              onClick={() => setShowModal(true)}
             >
-              {userId ? "Rate this series" : "Log in to rate"}
+              Rate this series
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-primary btn-mt"
+              onClick={() => onAuth?.("login")}
+            >
+              Log in to rate
             </button>
           )}
         </div>

@@ -1,4 +1,4 @@
-import type { CreateUserRequest, DisplaySeries, RecommendationDto, ReviewDto, ReviewRequest, SeriesListItem, TmdbSeriesDetails } from './types';
+import type { CreateUserRequest, DisplaySeries, ReviewDto, ReviewRequest, SeriesListItem, StoredRecommendation, TmdbSeriesDetails } from './types';
 
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w300';
 
@@ -20,6 +20,19 @@ const GENRE_MAP: Record<number, string> = {
   10768: 'War & Politics',
   37: 'Western',
 };
+
+function toDisplaySeriesFromDetails(d: TmdbSeriesDetails): DisplaySeries {
+  const year = d.first_air_date ? parseInt(d.first_air_date.slice(0, 4), 10) : null;
+  return {
+    id: d.id,
+    title: d.name,
+    description: d.overview,
+    year,
+    rating: d.vote_average,
+    genre: d.genres.map((g) => g.name),
+    poster: d.poster_path ? `${TMDB_IMAGE_BASE}${d.poster_path}` : null,
+  };
+}
 
 function toDisplaySeries(item: SeriesListItem): DisplaySeries {
   const year = item.first_air_date ? parseInt(item.first_air_date.slice(0, 4), 10) : null;
@@ -107,23 +120,18 @@ export async function getUserReviews(userId: string): Promise<ReviewDto[]> {
 
 export async function getSeriesById(tmdbId: number): Promise<DisplaySeries> {
   const d = await apiFetch<TmdbSeriesDetails>(`/series/${tmdbId}`);
-  const year = d.first_air_date ? parseInt(d.first_air_date.slice(0, 4), 10) : null;
-  return {
-    id: d.id,
-    title: d.name,
-    description: d.overview,
-    year,
-    rating: d.vote_average,
-    genre: d.genres.map((g) => g.name),
-    poster: d.poster_path ? `${TMDB_IMAGE_BASE}${d.poster_path}` : null,
-  };
+  return toDisplaySeriesFromDetails(d);
 }
 
-export async function getRecommendations(userId: string): Promise<RecommendationDto[]> {
-  return apiFetch<RecommendationDto[]>(`/series/recommendations/${userId}`);
+// Stored recommendations previously generated for the user, newest first
+// (ordered by created_at on the backend), each carrying its LLM confidence score.
+export async function getStoredRecommendations(userId: string): Promise<DisplaySeries[]> {
+  const items = await apiFetch<StoredRecommendation[]>(`/series/recommendations/${userId}`);
+  return items.map((it) => ({ ...toDisplaySeriesFromDetails(it), confidence: it.confidence, createdAt: it.created_at }));
 }
 
-export async function generateRecommendations(userId: string): Promise<DisplaySeries[]> {
+// Generate fresh recommendations from the LLM (also persists them server-side).
+export async function getLlmRecommendations(userId: string): Promise<DisplaySeries[]> {
   const items = await apiFetch<SeriesListItem[]>(`/series/recommendations/${userId}`, {
     method: 'POST',
   });

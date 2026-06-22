@@ -1,4 +1,6 @@
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -6,19 +8,23 @@
 }
 
 :root {
-  --bg: #FAF7F2;
-  --bg-secondary: #F2EAD8;
-  --text: #4A3020;
-  --text-muted: #9A8070;
-  --border: #B89A6A;
-  --border-light: #DDD0B8;
-  --accent: #6B2737;
-  --accent-text: #FAF7F2;
-  --hover: #F2EAD8;
-  --star-empty: #D4C0A0;
-  --star-fill: #6B2737;
+  --bg: #faf7f2;
+  --bg-secondary: #f2ead8;
+  --text: #4a3020;
+  --text-muted: #9a8070;
+  --border: #b89a6a;
+  --border-light: #ddd0b8;
+  --accent: #6b2737;
+  --accent-text: #faf7f2;
+  --hover: #f2ead8;
+  --star-empty: #d4c0a0;
+  --star-fill: #6b2737;
 
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
   font-size: 16px;
   line-height: 1.5;
   color: var(--text);
@@ -28,17 +34,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1E1410;
-    --bg-secondary: #2A1E18;
-    --text: #F0E6D0;
-    --text-muted: #A09080;
-    --border: #C8A87A;
-    --border-light: #4A3828;
-    --accent: #C8A87A;
-    --accent-text: #1E1410;
-    --hover: #2A1E18;
-    --star-empty: #4A3828;
-    --star-fill: #C8A87A;
+    --bg: #1e1410;
+    --bg-secondary: #2a1e18;
+    --text: #f0e6d0;
+    --text-muted: #a09080;
+    --border: #c8a87a;
+    --border-light: #4a3828;
+    --accent: #c8a87a;
+    --accent-text: #1e1410;
+    --hover: #2a1e18;
+    --star-empty: #4a3828;
+    --star-fill: #c8a87a;
   }
 }
 
@@ -66,11 +72,37 @@ body {
   z-index: 100;
 }
 
+.app-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app-logo {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--accent);
+}
+
+.app-logo-icon {
+  display: block;
+  flex-shrink: 0;
+}
+
 .app-title {
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.3px;
-  color: var(--text);
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Hamburger ─────────────────────────────── */
@@ -170,13 +202,12 @@ body {
 
 .section-title {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.8px;
   text-transform: uppercase;
-  color: var(--text-muted);
+  text-align: left;
+  color: var(--accent);
   margin-bottom: 16px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border-light);
 }
 
 /* ── Series list ───────────────────────────── */
@@ -242,6 +273,17 @@ body {
   font-size: 13px;
   color: var(--text-muted);
   flex-shrink: 0;
+}
+
+.series-card-confidence {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent, #4ade80);
+  background: color-mix(in srgb, var(--accent, #4ade80) 14%, transparent);
 }
 
 .series-card-meta {
@@ -769,4 +811,179 @@ body {
 
 .link-btn:hover {
   color: var(--text);
+}
+
+.inline-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.inline-link:hover {
+  color: var(--accent);
+}
+
+.detail-login-prompt {
+  margin-top: 16px;
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+/* ── Recommendations hero / generate zone ──────── */
+
+.recs-hero-title {
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+  text-align: left;
+  color: var(--accent);
+  margin-bottom: 5px;
+}
+
+.recs-hero-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+/* Placeholder + skeleton tones (darker base that "lights up" while loading). */
+:root {
+  --mystery-bg: #c9b489;
+  --mystery-bg-lit: #e6d8b8;
+  --skeleton-base: #e7ddc8;
+  --skeleton-hl: #f6efe0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mystery-bg: #140d09;
+    --mystery-bg-lit: #3a2a1e;
+    --skeleton-base: #2a1e18;
+    --skeleton-hl: #3c2c22;
+  }
+}
+
+/* ── Mystery "?" slots (generate imprint) ──────── */
+
+.mystery-slot {
+  cursor: default;
+}
+
+.mystery-slot:hover {
+  background: transparent;
+}
+
+.mystery-slot-poster {
+  width: 72px;
+  height: 108px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--accent);
+  background: var(--mystery-bg);
+}
+
+/* Title/rating/info sit behind a frosted blur until the pick is revealed. */
+.mystery-slot-info {
+  filter: blur(3px);
+  opacity: 0.9;
+}
+
+.mystery-slot-line {
+  height: 11px;
+  background: var(--mystery-bg);
+}
+
+/* While generating: each slot pulses dark → light, staggered via inline delay. */
+.mystery-slot.is-generating .mystery-slot-poster,
+.mystery-slot.is-generating .mystery-slot-line {
+  animation: slotPulse 1s ease-in-out infinite;
+}
+
+@keyframes slotPulse {
+  0%,
+  100% {
+    background-color: var(--mystery-bg);
+  }
+  50% {
+    background-color: var(--mystery-bg-lit);
+  }
+}
+
+/* ── Skeleton loaders (Instagram-style shimmer) ── */
+
+.skeleton-card {
+  cursor: default;
+  pointer-events: none;
+}
+
+.skeleton-poster {
+  width: 72px;
+  height: 108px;
+  flex-shrink: 0;
+}
+
+.skeleton-line {
+  height: 11px;
+  margin: 3px 0;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 25%,
+    var(--skeleton-hl) 37%,
+    var(--skeleton-base) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mystery-slot.is-generating .mystery-slot-poster,
+  .mystery-slot.is-generating .mystery-slot-line,
+  .skeleton-shimmer {
+    animation: none;
+  }
+}
+
+/* ── Section separator ─────────────────────────── */
+
+.recs-separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 36px 0 16px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.recs-separator::before,
+.recs-separator::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-light);
 }

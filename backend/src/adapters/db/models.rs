@@ -28,5 +28,6 @@ pub struct User {
 pub struct Recommendation {
     pub id: Uuid,
     pub tmdb_series_id: i64,
+    pub confidence: i16,
     pub created_at: DateTime<Utc>,
 }

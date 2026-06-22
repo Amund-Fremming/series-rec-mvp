@@ -1,4 +1,3 @@
-use backend::adapters::db::dto::RecommendationDto;
 use backend::adapters::llm::models::SeriesRecommendations;
 use backend::api::handlers;
 use backend::models::{ReviewDto, ReviewRequest, Series};
@@ -17,9 +16,10 @@ use utoipa_swagger_ui::SwaggerUi;
         handlers::save_review,
         handlers::get_user_review,
         handlers::delete_review,
-        handlers::get_recommendations,
+        handlers::get_stored_recommendations,
+        handlers::get_llm_recommendations,
     ),
-    components(schemas(Series, ReviewRequest, ReviewDto, SeriesRecommendations, RecommendationDto)),
+    components(schemas(Series, ReviewRequest, ReviewDto, SeriesRecommendations)),
     tags(
         (name = "health", description = "Health check"),
         (name = "series", description = "Series endpoints"),

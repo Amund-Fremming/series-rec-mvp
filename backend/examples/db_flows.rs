@@ -21,7 +21,7 @@ async fn main() {
     // --- Reviews ---
     // First save a recommendation so we can verify was_recommended flag
     let tmdb_series_id: i64 = 12345;
-    let _ = db.save_recommendation(tmdb_series_id).await;
+    let _ = db.save_recommendation(tmdb_series_id, 90).await;
 
     let was_recommended = db
         .is_series_recommended(tmdb_series_id)

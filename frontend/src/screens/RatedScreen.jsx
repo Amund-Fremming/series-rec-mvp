@@ -1,57 +1,30 @@
-import { useState, useEffect } from 'react';
 import SeriesCard from '../components/SeriesCard';
-import { getUserReviews, getSeriesById } from '../client';
+import { useAppData } from '../hooks/useAppData';
 
-export default function RatedScreen({ userId, onSelectReview }) {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-
-    getUserReviews(userId)
-      .then(async (reviews) => {
-        const enriched = await Promise.all(
-          reviews.map(async (review) => {
-            if (!review.tmdb_series_id) return null;
-            try {
-              const series = await getSeriesById(review.tmdb_series_id);
-              return { review, series };
-            } catch {
-              return null;
-            }
-          })
-        );
-        setItems(enriched.filter(Boolean));
-        setLoading(false);
-      })
-      .catch(() => {
-        setError('Failed to load your reviews.');
-        setLoading(false);
-      });
-  }, [userId]);
+export default function RatedScreen({ userId, onSelectReview, onAuth }) {
+  const { reviews } = useAppData();
 
   if (!userId) {
     return (
       <div className="screen">
-        <h2 className="section-title">My Ratings</h2>
-        <div className="empty-state">Log in to see your reviews.</div>
+        <div className="empty-state">
+          <button type="button" className="inline-link" onClick={() => onAuth('login')}>
+            Log in here
+          </button>{' '}
+          to see your reviews.
+        </div>
       </div>
     );
   }
 
+  const items = reviews.items ?? [];
+
   return (
     <div className="screen">
-      <h2 className="section-title">My Ratings</h2>
-
-      {loading ? (
+      {reviews.loading ? (
         <div className="empty-state">Loading...</div>
-      ) : error ? (
-        <div className="empty-state error-state">{error}</div>
+      ) : reviews.error ? (
+        <div className="empty-state error-state">{reviews.error}</div>
       ) : items.length === 0 ? (
         <div className="empty-state">
           No ratings yet. Find a series on the home screen and rate it.

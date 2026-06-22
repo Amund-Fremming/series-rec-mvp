@@ -38,10 +38,10 @@ export interface CreateUserRequest {
   passcode: string;
 }
 
-// Mirrors adapters/db/dto.rs
-export interface RecommendationDto {
-  id: string;
-  tmdb_series_id: number;
+// Mirrors api/handlers.rs StoredRecommendation (TmdbSeriesDetails fields flattened
+// alongside the LLM confidence score and when the recommendation was stored).
+export interface StoredRecommendation extends TmdbSeriesDetails {
+  confidence: number;
   created_at: string;
 }
 
@@ -91,4 +91,6 @@ export interface DisplaySeries {
   rating: number; // TMDB vote_average 0–10
   genre: string[];
   poster: string | null;
+  confidence?: number; // LLM match score (0–100), present on stored recommendations
+  createdAt?: string; // when the recommendation was stored; used to group by generation batch
 }

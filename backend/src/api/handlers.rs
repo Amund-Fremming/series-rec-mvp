@@ -5,13 +5,14 @@ use axum::{
     response::IntoResponse,
     routing::{delete, get, post},
 };
-use serde::Deserialize;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    adapters::{db::dto::RecommendationDto, tmdb::models::SeriesListItem},
+    adapters::tmdb::models::{SeriesDetails, SeriesListItem},
     errors::AppError,
     models::{CreateUserRequest, LoginRequest, PagedQuery, ReviewDto, ReviewRequest, Series, UpdateReviewRequest},
     state::AppState,
@@ -29,7 +30,7 @@ pub fn router() -> Router<AppState> {
         .route("/series/{tmdb_id}", get(get_series_by_tmdb_id))
         .route(
             "/series/recommendations/{user_id}",
-            get(get_recommendations).post(generate_recommendations),
+            get(get_stored_recommendations).post(get_llm_recommendations),
         )
         .route("/users", post(create_user))
 }
@@ -172,19 +173,40 @@ pub async fn get_series_by_tmdb_id(
     Ok((StatusCode::OK, Json(details)))
 }
 
-#[utoipa::path(get, path = "/series/recommendations/{user_id}", params(("user_id" = Uuid, Path, description = "User UUID")), responses((status = 200, description = "Recommendations", body = Vec<RecommendationDto>)), tag = "series")]
-pub async fn get_recommendations(
+/// A previously stored recommendation enriched with its TMDB series details and
+/// the confidence score the LLM assigned when it generated the match.
+#[derive(Serialize)]
+pub struct StoredRecommendation {
+    #[serde(flatten)]
+    pub series: SeriesDetails,
+    pub confidence: i16,
+    pub created_at: DateTime<Utc>,
+}
+
+#[utoipa::path(get, path = "/series/recommendations/{user_id}", params(("user_id" = Uuid, Path, description = "User UUID")), responses((status = 200, description = "Stored recommendations as TMDB series with confidence, newest first")), tag = "series")]
+pub async fn get_stored_recommendations(
     State(state): State<AppState>,
     Path(_user_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
+    // Already ordered by created_at DESC (newest first) in the query.
     let recs = state.db.get_recommendations().await?;
-    let dtos: Vec<RecommendationDto> = recs.into_iter().map(RecommendationDto::from).collect();
 
-    Ok(Json(dtos))
+    let mut stored = Vec::new();
+    for rec in recs {
+        if let Ok(series) = state.tmdb.get_series_details(rec.tmdb_series_id as u64).await {
+            stored.push(StoredRecommendation {
+                series,
+                confidence: rec.confidence,
+                created_at: rec.created_at,
+            });
+        }
+    }
+
+    Ok(Json(stored))
 }
 
 #[utoipa::path(post, path = "/series/recommendations/{user_id}", params(("user_id" = Uuid, Path, description = "User UUID")), responses((status = 200, description = "Generated recommendations as TMDB series")), tag = "series")]
-pub async fn generate_recommendations(
+pub async fn get_llm_recommendations(
     State(state): State<AppState>,
     Path(user_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -213,7 +235,10 @@ pub async fn generate_recommendations(
     for rec in llm_recs.recommendations {
         if let Ok(results) = state.tmdb.search_series(&rec.title).await {
             if let Some(series) = results.into_iter().next() {
-                let _ = state.db.save_recommendation(series.id as i64).await;
+                let _ = state
+                    .db
+                    .save_recommendation(series.id as i64, rec.confidence as i16)
+                    .await;
                 series_results.push(series);
             }
         }

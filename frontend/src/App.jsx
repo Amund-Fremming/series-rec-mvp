@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { useUserId } from "./hooks/useUserId";
 import HamburgerMenu from "./components/HamburgerMenu";
-import LoginModal from "./components/LoginModal";
-import RegisterModal from "./components/RegisterModal";
+import Logo from "./components/Logo";
+import AuthModal from "./components/AuthModal";
 import HomeScreen from "./screens/HomeScreen";
 import RatedScreen from "./screens/RatedScreen";
 import SeriesDetailScreen from "./screens/SeriesDetailScreen";
 import ReviewDetailScreen from "./screens/ReviewDetailScreen";
-import LoginScreen from "./screens/LoginScreen";
-import CreateUserScreen from "./screens/CreateUserScreen";
 import RecommendationsScreen from "./screens/RecommendationsScreen";
 
 export default function App() {
@@ -16,9 +14,8 @@ export default function App() {
   const [selectedSeries, setSelectedSeries] = useState(null);
   const [selectedReview, setSelectedReview] = useState(null);
   const [prevScreen, setPrevScreen] = useState("home");
-  const [userId, setUserId] = useUserId();
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const { userId, setUserId } = useUserId();
+  const [authMode, setAuthMode] = useState(null);
 
   function navigateTo(newScreen) {
     setScreen(newScreen);
@@ -43,15 +40,9 @@ export default function App() {
     setScreen("review-detail");
   }
 
-  function handleLogin(id) {
+  function handleAuthLogin(id) {
     setUserId(id);
-    setShowLoginModal(false);
-    navigateTo("home");
-  }
-
-  function handleModalLogin(id) {
-    setUserId(id);
-    setShowLoginModal(false);
+    setAuthMode(null);
   }
 
   function handleLogout() {
@@ -59,8 +50,8 @@ export default function App() {
     navigateTo("home");
   }
 
-  function handleLoginRequired() {
-    setShowLoginModal(true);
+  function openAuth(mode = "login") {
+    setAuthMode(mode);
   }
 
   const headerTitle =
@@ -68,42 +59,46 @@ export default function App() {
       ? "My Ratings"
       : screen === "recommendations"
         ? "Recommendations"
-        : screen === "login"
-          ? "Login"
-          : screen === "create-user"
-            ? "Create Account"
-            : "";
+        : screen === "home"
+          ? "Popular"
+          : "";
 
   return (
     <>
       <header className="app-header">
-        <span className="app-title">{headerTitle}</span>
+        <div className="app-header-left">
+          <Logo onClick={() => navigateTo("home")} />
+          {headerTitle && <h1 className="app-title">{headerTitle}</h1>}
+        </div>
         <HamburgerMenu
           currentScreen={screen}
           onNavigate={navigateTo}
           userId={userId}
           onLogout={handleLogout}
+          onAuth={openAuth}
         />
       </header>
 
       {screen === "home" && <HomeScreen onSelectSeries={selectSeries} />}
       {screen === "rated" && (
-        <RatedScreen userId={userId} onSelectReview={selectReview} />
+        <RatedScreen
+          userId={userId}
+          onSelectReview={selectReview}
+          onAuth={openAuth}
+        />
       )}
       {screen === "recommendations" && (
         <RecommendationsScreen
           userId={userId}
           onSelectSeries={selectSeries}
-          onLoginRequired={handleLoginRequired}
+          onAuth={openAuth}
         />
       )}
-      {screen === "login" && <LoginScreen onLogin={handleLogin} />}
-      {screen === "create-user" && <CreateUserScreen onLogin={handleLogin} />}
       {screen === "detail" && selectedSeries && (
         <SeriesDetailScreen
           series={selectedSeries}
           onBack={goBack}
-          onLoginRequired={handleLoginRequired}
+          onAuth={openAuth}
         />
       )}
       {screen === "review-detail" && selectedSeries && selectedReview && (
@@ -115,18 +110,11 @@ export default function App() {
         />
       )}
 
-      {showLoginModal && (
-        <LoginModal
-          onLogin={handleModalLogin}
-          onClose={() => setShowLoginModal(false)}
-          onRegister={() => { setShowLoginModal(false); setShowRegisterModal(true); }}
-        />
-      )}
-      {showRegisterModal && (
-        <RegisterModal
-          onLogin={handleModalLogin}
-          onClose={() => setShowRegisterModal(false)}
-          onBackToLogin={() => { setShowRegisterModal(false); setShowLoginModal(true); }}
+      {authMode && (
+        <AuthModal
+          initialMode={authMode}
+          onLogin={handleAuthLogin}
+          onClose={() => setAuthMode(null)}
         />
       )}
     </>

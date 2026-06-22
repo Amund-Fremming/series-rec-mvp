@@ -13,6 +13,11 @@ export default function SeriesCard({ series, onClick, userRating, compact = fals
           <h3 className="series-card-title">{series.title}</h3>
           {series.year && <span className="series-card-year">{series.year}</span>}
         </div>
+        {series.confidence !== undefined && (
+          <span className="series-card-confidence" title="AI match confidence">
+            {series.confidence}% match
+          </span>
+        )}
         {!compact && (
           <>
             <div className="series-card-meta">
